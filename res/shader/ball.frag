@@ -16,9 +16,9 @@ uniform vec3 viewPos;
 float ShadowCalculation(vec4 fragPosLightSpace) {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords = projCoords * 0.5 + 0.5;
-    float closestDepth = texture(shadowMap, projCoords.xy).r; 
+    float closestDepth = texture(shadowMap, projCoords.xy).r;
     float currentDepth = projCoords.z;
-	float bias = 0.005;
+    float bias = 0.005;
     float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
     return shadow;
 }
@@ -26,25 +26,37 @@ float ShadowCalculation(vec4 fragPosLightSpace) {
 void main() {
     vec3 lightColor = vec3(1.0);
 
-	// 环境光
-	vec3 ambient = 1.0 * lightColor;
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(lightPos - Position);
+    vec3 viewDir = normalize(viewPos - Position);
 
-	// 漫反射
-	vec3 norm = normalize(Normal);
-	vec3 lightDir = normalize(lightPos - Position);
-	float diff = max(dot(norm, lightDir), 0.0);
-	vec3 diffuse = diff * lightColor;
+    // hemisphere ambient: top-down gradient (sky vs ground)
+    float hemi = norm.y * 0.5 + 0.5;
+    vec3 skyAmbient = vec3(0.25, 0.35, 0.55);
+    vec3 groundAmbient = vec3(0.15, 0.12, 0.08);
+    vec3 ambient = mix(groundAmbient, skyAmbient, hemi) * lightColor;
 
-	// 镜面反射
-	vec3 viewDir = normalize(viewPos - Position);
-	vec3 reflectDir = reflect(-lightDir, norm);
-	vec3 halfwayDir = normalize(lightDir + viewDir);
-	float spec = pow(max(dot(halfwayDir, reflectDir), 0.0), 64.0);
-	vec3 specular = spec * lightColor;
+    // diffuse
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * lightColor;
 
-	// 计算阴影
-	float shadow = ShadowCalculation(PosLightSpace);
+    // specular (Blinn-Phong)
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), 64.0);
+    vec3 specular = spec * lightColor * 0.5;
 
-	vec3 result = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
-	FragColor = vec4(result, 1.0);
+    // rim light: edge glow gives 3D sphere feel even in shadow
+    float rim = 1.0 - max(dot(norm, viewDir), 0.0);
+    rim = pow(rim, 3.0) * 0.35;
+    vec3 rimColor = vec3(0.6, 0.7, 0.9);
+
+    // shadow
+    float shadow = ShadowCalculation(PosLightSpace);
+    float shadowFactor = 1.0 - shadow;
+
+    // compose: ambient always visible, shadow dims diffuse+spec, rim always visible
+    vec3 result = ambient + shadowFactor * (diffuse + specular) + rim * rimColor * color;
+    result *= color;
+
+    FragColor = vec4(result, 1.0);
 }

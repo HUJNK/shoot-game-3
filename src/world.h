@@ -9,6 +9,8 @@
 #include "particle.h"
 #include "skybox.h"
 #include "hud.h"
+#include "obstacle.h"
+#include "scorepopup.h"
 
 class World {
 private:
@@ -22,6 +24,8 @@ private:
 	ParticleSystem* particles;
 	Skybox* skybox;
 	HUD* hud;
+	ObstacleManager* obstacles;
+	ScorePopupManager* scorePopups;
 	GLuint gameModel;
 	bool wasLeftPressed;
 	float lastDeltaTime;
@@ -49,6 +53,8 @@ public:
 		particles = new ParticleSystem();
 		skybox = new Skybox();
 			hud = new HUD();
+			obstacles = new ObstacleManager();
+			scorePopups = new ScorePopupManager();
 			wasLeftPressed = false;
 
 		glGenFramebuffers(1, &depthMapFBO);
@@ -68,20 +74,36 @@ public:
 		wasLeftPressed = leftPressed;
 
 		if (justShot) {
-			ball->Update(camera->GetPosition(), camera->GetFront(), true);
+				// check obstacles first
+				vec3 obsHit = obstacles->CheckHit(camera->GetPosition(), camera->GetFront());
+				if (obsHit.x > -900) {
+					// hit obstacle: explode, block shot
+					particles->Explode(obsHit, vec4(0.8f, 0.3f, 0.1f, 1.0f), 50);
+					ball->Update(camera->GetPosition(), camera->GetFront(), false);
+				} else {
+					ball->Update(camera->GetPosition(), camera->GetFront(), true);
+				}
 			player->Update(deltaTime, true);
 		}
 		else {
 			ball->Update(camera->GetPosition(), camera->GetFront(), false);
 			player->Update(deltaTime, false);
 		}
+		// spawn obstacles for mode 2 when wave cleared
+		if (gameModel == 2 && obstacles->IsEmpty()) {
+			obstacles->SpawnWave();
+		}
 		place->Update();
 
 		vector<vec3> hits = ball->GetHitPositions();
 		for (vec3 hitPos : hits) {
 			particles->Explode(hitPos, vec4(0.5f, 0.7f, 0.95f, 1.0f), 80);
+				// spawn floating score text
+				int mult = ball->GetComboMult();
+				scorePopups->Spawn(hitPos, mult, mult);
 		}
 		particles->Update(deltaTime);
+		scorePopups->Update(deltaTime);
 		char title[64];
 		sprintf_s(title, "Lives: %d | Score: %d | Combo: x%d", ball->GetLives(), ball->GetScore(), ball->GetComboMult());
 		glfwSetWindowTitle(window, title);
@@ -96,8 +118,16 @@ public:
 		player->Render();
 		place->RoomRender(NULL, depthMap);
 		place->SunRender();
+		obstacles->Render(
+			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
+			camera->GetViewMatrix()
+		);
 		ball->Render(NULL, depthMap);
 		particles->Render(
+			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
+			camera->GetViewMatrix()
+		);
+		scorePopups->Render(
 			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
 			camera->GetViewMatrix()
 		);

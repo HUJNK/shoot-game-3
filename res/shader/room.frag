@@ -25,7 +25,7 @@ float ShadowCalculation(vec4 PosLightSpace) {
 
 void main() {
 	vec3 color = texture(diffuse, TexCoord).rgb;
-    vec3 lightColor = vec3(1.0);
+    vec3 lightColor = vec3(0.4,0.3,0.1);
 
 	// »·¾³¹â
 	vec3 ambient = 0.5 * lightColor;

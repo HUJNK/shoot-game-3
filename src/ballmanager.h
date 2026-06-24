@@ -29,7 +29,7 @@ private:
 	mat4 lightSpaceMatrix;				// 将顶点世界坐标转换为以光源为中心的坐标
 
 	Camera* camera;
-		vector<vec3> hitPositions;
+	vector<vec3> hitPositions;
 	// 模型变换矩阵
 	mat4 model;
 	mat4 projection;
@@ -69,18 +69,33 @@ public:
 				}
 				else {
 					number--;
-				hitPositions.push_back(position[i]);
+					hitPositions.push_back(position[i]);
 					score++;
 				}
 			}
 			position = temp;
 		}
-		if (gameModel == 1) {
-			AddBall();
-			return;
+
+		// 区分两种游戏模式
+		if (gameModel == 1)
+		{
+			// 休闲模式：小球向上漂浮
+			for (GLuint i = 0; i < position.size(); i++)
+			{
+				position[i].y += moveSpeed;
+				// 超出上边界，重置到下方循环
+				if (position[i].y > 35.0f)
+				{
+					position[i].y = -5.0f;
+				}
+			}
 		}
-		for (GLuint i = 0; i < position.size(); i++)
-			position[i].z += moveSpeed;
+		else
+		{
+			// 挑战模式：小球向前移动
+			for (GLuint i = 0; i < position.size(); i++)
+				position[i].z += moveSpeed;
+		}
 
 		if (number == 0) {
 			maxNumber++;
@@ -102,9 +117,9 @@ public:
 	GLuint GetScore() {
 		return score;
 	}
-		vector<vec3> GetHitPositions() {
-			return hitPositions;
-		}
+	vector<vec3> GetHitPositions() {
+		return hitPositions;
+	}
 	// 渲染小球
 	void Render(Shader* shader, GLuint depthMap = -1) {
 		for (GLuint i = 0; i < position.size(); i++) {
@@ -125,7 +140,7 @@ public:
 			glBindTexture(GL_TEXTURE_2D, depthMap);
 			glBindVertexArray(ball->GetVAO());
 			glDrawElements(GL_TRIANGLES, static_cast<GLuint>(ball->GetIndices().size()), GL_UNSIGNED_INT, 0);
-			
+
 			shader->Unbind();
 			glBindVertexArray(0);
 			model = mat4(1.0);
@@ -147,14 +162,14 @@ private:
 	void AddBall() {
 		for (GLuint i = number; i < maxNumber; i++) {
 			float judgeX = rand() % 2;
-			float x = (judgeX >= 0.5) ? rand() % 30: -(rand() % 30);
+			float x = (judgeX >= 0.5) ? rand() % 30 : -(rand() % 30);
 			float y = rand() % 30;
 			vec3 pos = vec3(basicPos.x + x, basicPos.y + y, basicPos.z);
 			if (CheckPosition(pos)) {
 				position.push_back(pos);
 				number++;
 			}
-			else 
+			else
 				i--;
 		}
 	}

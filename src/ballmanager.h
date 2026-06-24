@@ -18,19 +18,20 @@ private:
 
 	Model* ball;
 	Shader* ballShader;
-	GLuint number;						// µ±Ç°Ð¡ÇòÊýÄ¿
-	GLuint maxNumber;					// Ð¡Çò×î´óÊýÄ¿
-	vec3 basicPos;						// Ð¡Çò»ù´¡×ø±ê
-	vector<vec3> position;				// ³¡ÉÏ´æÔÚµÄÐ¡Çò×ø±ê
-	float moveSpeed;					// Ð¡ÇòÒÆ¶¯ËÙ¶È
-	GLuint score;						// µÃ·Ö
-	GLuint gameModel;					// ÓÎÏ·Ä£Ê½
-	vec3 lightPos;						// ¹âÔ´Î»ÖÃ
-	mat4 lightSpaceMatrix;				// ½«¶¥µãÊÀ½ç×ø±ê×ª»»ÎªÒÔ¹âÔ´ÎªÖÐÐÄµÄ×ø±ê
+	GLuint number;						// ï¿½ï¿½Ç°Ð¡ï¿½ï¿½ï¿½ï¿½Ä¿
+	GLuint maxNumber;					// Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä?
+	vec3 basicPos;						// Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
+	vector<vec3> position;				// ï¿½ï¿½ï¿½Ï´ï¿½ï¿½Úµï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	float moveSpeed;					// Ð¡ï¿½ï¿½ï¿½Æ¶ï¿½ï¿½Ù¶ï¿½
+	GLuint score;
+	GLuint lives;						// ï¿½Ã·ï¿½
+	GLuint gameModel;					// ï¿½ï¿½Ï·Ä£Ê½
+	vec3 lightPos;						// ï¿½ï¿½Ô´Î»ï¿½ï¿½
+	mat4 lightSpaceMatrix;				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½Îªï¿½Ô¹ï¿½Ô´Îªï¿½ï¿½ï¿½Äµï¿½ï¿½ï¿½ï¿½ï¿½
 
 	Camera* camera;
 	vector<vec3> hitPositions;
-	// Ä£ÐÍ±ä»»¾ØÕó
+	// Ä£ï¿½Í±ä»»ï¿½ï¿½ï¿½ï¿½
 	mat4 model;
 	mat4 projection;
 	mat4 view;
@@ -43,6 +44,7 @@ public:
 		maxNumber = 3;
 		moveSpeed = 0.1f;
 		score = 0;
+			lives = 3;
 		this->lightPos = vec3(0.0, 400.0, 150.0);
 		mat4 lightProjection = ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 500.0f);
 		mat4 lightView = lookAt(lightPos, vec3(0.0f), vec3(0.0, 1.0, 0.0));
@@ -50,11 +52,11 @@ public:
 		AddBall();
 		LoadModel();
 	}
-	// ÉèÖÃÓÎÏ·Ä£Ê½
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·Ä£Ê½
 	void SetGameModel(GLuint num) {
 		gameModel = num;
 	}
-	// ¸üÐÂ±ä»»¾ØÕó£¬ÅÐ¶ÏÉä»÷ÊÇ·ñ»÷ÖÐÐ¡Çò
+	// ï¿½ï¿½ï¿½Â±ä»»ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½
 	void Update(vec3 pos, vec3 dir, bool isShoot) {
 		this->view = camera->GetViewMatrix();
 		hitPositions.clear();
@@ -76,15 +78,15 @@ public:
 			position = temp;
 		}
 
-		// Çø·ÖÁ½ÖÖÓÎÏ·Ä£Ê½
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·Ä£Ê½
 		if (gameModel == 1)
 		{
-			// ÐÝÏÐÄ£Ê½£ºÐ¡ÇòÏòÉÏÆ¯¸¡
+			// ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¯ï¿½ï¿½
 			for (GLuint i = 0; i < position.size(); i++)
 			{
 				position[i].y += moveSpeed;
-				// ³¬³öÉÏ±ß½ç£¬ÖØÖÃµ½ÏÂ·½Ñ­»·
-				if (position[i].y > 35.0f)
+				// ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ß½ç£¬ï¿½ï¿½ï¿½Ãµï¿½ï¿½Â·ï¿½Ñ­ï¿½ï¿½
+				if (position[i].y > 55.0f)
 				{
 					position[i].y = -5.0f;
 				}
@@ -92,11 +94,16 @@ public:
 		}
 		else
 		{
-			// ÌôÕ½Ä£Ê½£ºÐ¡ÇòÏòÇ°ÒÆ¶¯
-			for (GLuint i = 0; i < position.size(); i++)
+			// tiao zhan mo shi: qiu fei guo kou ming
+			for (int i = (int)position.size() - 1; i >= 0; i--) {
 				position[i].z += moveSpeed;
+				if (position[i].z >= 70) {
+					position.erase(position.begin() + i);
+					number--;
+					lives--;
+				}
+			}
 		}
-
 		if (number == 0) {
 			maxNumber++;
 			if (maxNumber == 10) {
@@ -106,12 +113,19 @@ public:
 			AddBall();
 		}
 	}
-	// ÅÐ¶ÏÓÎÏ·ÊÇ·ñ½áÊø
+	// ï¿½Ð¶ï¿½ï¿½ï¿½Ï·ï¿½Ç·ï¿½ï¿½ï¿½ï¿?
 	bool IsOver() {
-		if (position.size() > 0)
-			if (position[0].z >= 70)
-				return true;
-		return false;
+		if (gameModel == 1) {
+			// normal mode: ball passes = game over
+			if (position.size() > 0)
+				if (position[0].z >= 70)
+					return true;
+			return false;
+		}
+		else {
+			// challenge mode: lives depleted = game over
+			return lives <= 0;
+		}
 	}
 
 	GLuint GetScore() {
@@ -120,7 +134,10 @@ public:
 	vector<vec3> GetHitPositions() {
 		return hitPositions;
 	}
-	// äÖÈ¾Ð¡Çò
+	GLuint GetLives() {
+		return lives;
+	}
+	// ï¿½ï¿½È¾Ð¡ï¿½ï¿½
 	void Render(Shader* shader, GLuint depthMap = -1) {
 		for (GLuint i = 0; i < position.size(); i++) {
 			model = mat4(1.0);
@@ -158,7 +175,7 @@ private:
 		ballShader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 		ballShader->Unbind();
 	}
-	// Ìí¼ÓÐ¡Çò
+	// ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½
 	void AddBall() {
 		for (GLuint i = number; i < maxNumber; i++) {
 			float judgeX = rand() % 2;
@@ -173,7 +190,7 @@ private:
 				i--;
 		}
 	}
-	// ¼ì²éÒÑ´æÔÚÐ¡ÇòµÄÎ»ÖÃ£¬±ÜÃâÌí¼ÓµÄÐ¡Çò³öÏÖÖØµþ
+	// ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½Î»ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿?
 	bool CheckPosition(vec3 pos) {
 		for (GLuint i = 0; i < position.size(); i++) {
 			float away = pow(position[i].x - pos.x, 2) + pow(position[i].y - pos.y, 2);

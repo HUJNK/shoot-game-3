@@ -69,9 +69,12 @@ public:
 
 		vector<vec3> hits = ball->GetHitPositions();
 		for (vec3 hitPos : hits) {
-			particles->Explode(hitPos, vec4(1.0f, 0.6f, 0.1f, 1.0f), 80);
+			particles->Explode(hitPos, vec4(0.5f, 0.7f, 0.95f, 1.0f), 80);
 		}
 		particles->Update(deltaTime);
+		char title[64];
+		sprintf_s(title, "Lives: %d | Score: %d", ball->GetLives(), ball->GetScore());
+		glfwSetWindowTitle(window, title);
 		lastDeltaTime = deltaTime;
 	}
 
@@ -92,6 +95,10 @@ public:
 
 	GLuint GetScore() {
 		return ball->GetScore();
+	}
+
+	GLuint GetLives() {
+		return ball->GetLives();
 	}
 
 	bool IsOver() {

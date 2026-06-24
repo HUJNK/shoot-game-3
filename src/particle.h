@@ -35,43 +35,72 @@ public:
         glGenBuffers(1, &VBO_POS);
         glGenBuffers(1, &VBO_COLOR);
         glGenBuffers(1, &VBO_SIZE);
-        gravity = vec3(0.0f, -2.0f, 0.0f);
+        gravity = vec3(0.0f, -7.0f, 0.0f);
     }
 
     void Explode(vec3 position, vec4 color, int count = 80) {
-        // main explosion particles
-        for (int i = 0; i < count; i++) {
+        // === CENTER PLUME: shoots straight up like a water column ===
+        for (int i = 0; i < 40; i++) {
             Particle p;
             p.position = position;
-            float angle = (rand() % 360) * 3.14159f / 180.0f;
-            float elevation = (rand() % 180 - 90) * 3.14159f / 180.0f;
-            float speed = 5.0f + (rand() % 100) / 7.0f;
-            p.velocity.x = cos(elevation) * cos(angle) * speed;
-            p.velocity.y = cos(elevation) * sin(angle) * speed;
-            p.velocity.z = sin(elevation) * speed;
-            p.color = color;
-            p.color.r += (rand() % 40 - 20) / 100.0f;
-            p.color.g += (rand() % 40 - 20) / 100.0f;
-            p.color.b += (rand() % 40 - 20) / 100.0f;
-            p.size = 1.5f + (rand() % 100) / 40.0f;
-            p.maxLife = 0.8f + (rand() % 100) / 80.0f;
+            float spreadAngle = (rand() % 360) * 3.14159f / 180.0f;
+            float spreadRadius = (rand() % 100) / 300.0f;
+            float upSpeed = 6.0f + (rand() % 100) / 8.0f;
+            p.velocity.x = cos(spreadAngle) * spreadRadius * upSpeed;
+            p.velocity.y = upSpeed;
+            p.velocity.z = sin(spreadAngle) * spreadRadius * upSpeed;
+            p.color = vec4(0.7f + (rand()%30)/100.0f, 0.85f + (rand()%15)/100.0f, 1.0f, 1.0f);
+            p.size = 6.0f + (rand() % 100) / 10.0f;
+            p.maxLife = 1.0f + (rand() % 100) / 80.0f;
             p.life = p.maxLife;
             particles.push_back(p);
         }
-        // shockwave ring
-        for (int j = 0; j < 20; j++) {
+        // === MAIN SPLASH: arcs outward in all directions ===
+        for (int i = 0; i < 100; i++) {
+            Particle p;
+            p.position = position;
+            float angle = (rand() % 360) * 3.14159f / 180.0f;
+            float elevation = (rand() % 100 - 10) * 3.14159f / 180.0f;
+            float speed = 5.0f + (rand() % 100) / 6.0f;
+            p.velocity.x = cos(elevation) * cos(angle) * speed;
+            p.velocity.y = sin(elevation) * speed;
+            p.velocity.z = cos(elevation) * sin(angle) * speed;
+            p.color = vec4(0.6f + (rand()%40)/100.0f, 0.8f + (rand()%20)/100.0f, 0.95f + (rand()%5)/100.0f, 1.0f);
+            p.size = 5.0f + (rand() % 100) / 10.0f;
+            p.maxLife = 0.8f + (rand() % 100) / 70.0f;
+            p.life = p.maxLife;
+            particles.push_back(p);
+        }
+        // === FOAM RING: white splash ring at base ===
+        for (int j = 0; j < 40; j++) {
             Particle r;
             r.position = position;
-            float ringAngle = (j / 20.0f) * 6.28318f;
-            float ringSpeed = 10.0f + (rand() % 100) / 15.0f;
+            float ringAngle = (j / 40.0f) * 6.28318f;
+            float ringSpeed = 7.0f + (rand() % 100) / 10.0f;
             r.velocity.x = cos(ringAngle) * ringSpeed;
-            r.velocity.y = (rand() % 40 - 20) / 30.0f;
+            r.velocity.y = 2.0f + (rand() % 100) / 30.0f;
             r.velocity.z = sin(ringAngle) * ringSpeed;
-            r.color = vec4(1.0f, 0.9f, 0.3f, 1.0f);
-            r.size = 3.0f + (rand() % 100) / 50.0f;
+            r.color = vec4(0.9f, 0.95f, 1.0f, 1.0f);
+            r.size = 8.0f + (rand() % 100) / 8.0f;
             r.maxLife = 0.5f + (rand() % 100) / 100.0f;
             r.life = r.maxLife;
             particles.push_back(r);
+        }
+        // === MIST: fine white spray ===
+        for (int k = 0; k < 30; k++) {
+            Particle m;
+            m.position = position;
+            float ma = (rand() % 360) * 3.14159f / 180.0f;
+            float me = (rand() % 120 - 20) * 3.14159f / 180.0f;
+            float ms = 3.0f + (rand() % 100) / 30.0f;
+            m.velocity.x = cos(me) * cos(ma) * ms;
+            m.velocity.y = sin(me) * ms;
+            m.velocity.z = cos(me) * sin(ma) * ms;
+            m.color = vec4(1.0f, 1.0f, 1.0f, 0.6f);
+            m.size = 4.0f + (rand() % 100) / 20.0f;
+            m.maxLife = 0.3f + (rand() % 100) / 200.0f;
+            m.life = m.maxLife;
+            particles.push_back(m);
         }
     }
 
@@ -125,7 +154,6 @@ public:
 
         glBindVertexArray(0);
         shader->Unbind();
-    }
-};
+    }};
 
 #endif

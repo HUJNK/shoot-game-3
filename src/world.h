@@ -7,6 +7,7 @@
 #include "camera.h"
 #include "ballmanager.h"
 #include "particle.h"
+#include "skybox.h"
 
 class World {
 private:
@@ -18,6 +19,8 @@ private:
 	Camera* camera;
 	BallManager* ball;
 	ParticleSystem* particles;
+	Skybox* skybox;
+	float lastDeltaTime;
 
 	GLuint depthMap;
 	GLuint depthMapFBO;
@@ -40,6 +43,7 @@ public:
 		player = new Player(windowSize, camera);
 		ball = new BallManager(windowSize, camera);
 		particles = new ParticleSystem();
+		skybox = new Skybox();
 
 		glGenFramebuffers(1, &depthMapFBO);
 		glGenTextures(1, &depthMap);
@@ -68,10 +72,14 @@ public:
 			particles->Explode(hitPos, vec4(1.0f, 0.6f, 0.1f, 1.0f), 80);
 		}
 		particles->Update(deltaTime);
+		lastDeltaTime = deltaTime;
 	}
 
 	void Render() {
 		RenderDepth();
+		mat4 proj = perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f);
+		mat4 view = camera->GetViewMatrix();
+		skybox->Render(proj, view, normalize(vec3(0.0f, 400.0f, 150.0f)), lastDeltaTime);
 		player->Render();
 		place->RoomRender(NULL, depthMap);
 		place->SunRender();

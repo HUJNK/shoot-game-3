@@ -15,6 +15,7 @@ Release/
 *.ilk
 *.pdb
 *.obj
+!res/**/*.obj
 
 # Dll (keep in repo if needed, but usually rebuilt)
 # assimp-vc143-mtd.dll

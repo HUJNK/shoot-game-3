@@ -1,0 +1,25 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.VC.db
+*.VC.opendb
+*.dbmdl
+
+# Build output
+x64/
+Win32/
+Debug/
+Release/
+*.exe
+*.ilk
+*.pdb
+*.obj
+
+# Dll (keep in repo if needed, but usually rebuilt)
+# assimp-vc143-mtd.dll
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store

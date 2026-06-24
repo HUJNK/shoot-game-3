@@ -24,7 +24,8 @@ private:
 	vector<vec3> position;				// ���ϴ��ڵ�С������
 	float moveSpeed;					// С���ƶ��ٶ�
 	GLuint score;
-	GLuint lives;						// �÷�
+	GLuint lives;
+	GLuint combo;						// �÷�
 	GLuint gameModel;					// ��Ϸģʽ
 	vec3 lightPos;						// ��Դλ��
 	mat4 lightSpaceMatrix;				// ��������������ת��Ϊ�Թ�ԴΪ���ĵ�����
@@ -45,6 +46,7 @@ public:
 		moveSpeed = 0.1f;
 		score = 0;
 			lives = 3;
+			combo = 0;
 		this->lightPos = vec3(0.0, 400.0, 150.0);
 		mat4 lightProjection = ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 500.0f);
 		mat4 lightView = lookAt(lightPos, vec3(0.0f), vec3(0.0, 1.0, 0.0));
@@ -60,6 +62,7 @@ public:
 	void Update(vec3 pos, vec3 dir, bool isShoot) {
 		this->view = camera->GetViewMatrix();
 		hitPositions.clear();
+			bool hitThisFrame = false;
 		this->projection = perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f);
 
 		if (isShoot) {
@@ -72,10 +75,26 @@ public:
 				else {
 					number--;
 					hitPositions.push_back(position[i]);
-					score++;
+					hitThisFrame = true;
+					int oldMult = 1;
+					if (combo >= 15) oldMult = 5;
+					else if (combo >= 9) oldMult = 4;
+					else if (combo >= 5) oldMult = 3;
+					else if (combo >= 2) oldMult = 2;
+					combo++;
+					// combo multiplier: x1 to x5 max
+					int mult = 1;
+					if (combo >= 15) mult = 5;
+					else if (combo >= 9) mult = 4;
+					else if (combo >= 5) mult = 3;
+					else if (combo >= 2) mult = 2;
+					score += mult;
+					if (mult > oldMult)
+						cout << "COMBO x" << mult << "!" << endl;
 				}
 			}
 			position = temp;
+			if (!hitThisFrame) combo = 0;
 		}
 
 		// ����������Ϸģʽ
@@ -101,6 +120,8 @@ public:
 					position.erase(position.begin() + i);
 					number--;
 					lives--;
+					combo = 0;
+					cout << "Ouch! Combo reset." << endl;
 				}
 			}
 		}
@@ -136,6 +157,16 @@ public:
 	}
 	GLuint GetLives() {
 		return lives;
+	}
+	GLuint GetCombo() {
+		return combo;
+	}
+	GLuint GetComboMult() {
+		if (combo >= 15) return 5;
+		if (combo >= 9) return 4;
+		if (combo >= 5) return 3;
+		if (combo >= 2) return 2;
+		return 1;
 	}
 	// ��ȾС��
 	void Render(Shader* shader, GLuint depthMap = -1) {

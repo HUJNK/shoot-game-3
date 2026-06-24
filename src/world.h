@@ -8,6 +8,7 @@
 #include "ballmanager.h"
 #include "particle.h"
 #include "skybox.h"
+#include "hud.h"
 
 class World {
 private:
@@ -20,6 +21,9 @@ private:
 	BallManager* ball;
 	ParticleSystem* particles;
 	Skybox* skybox;
+	HUD* hud;
+	GLuint gameModel;
+	bool wasLeftPressed;
 	float lastDeltaTime;
 
 	GLuint depthMap;
@@ -44,6 +48,8 @@ public:
 		ball = new BallManager(windowSize, camera);
 		particles = new ParticleSystem();
 		skybox = new Skybox();
+			hud = new HUD();
+			wasLeftPressed = false;
 
 		glGenFramebuffers(1, &depthMapFBO);
 		glGenTextures(1, &depthMap);
@@ -57,7 +63,11 @@ public:
 
 	void Update(float deltaTime) {
 		camera->Update(deltaTime);
-		if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+		bool leftPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+		bool justShot = leftPressed && !wasLeftPressed;
+		wasLeftPressed = leftPressed;
+
+		if (justShot) {
 			ball->Update(camera->GetPosition(), camera->GetFront(), true);
 			player->Update(deltaTime, true);
 		}
@@ -73,7 +83,7 @@ public:
 		}
 		particles->Update(deltaTime);
 		char title[64];
-		sprintf_s(title, "Lives: %d | Score: %d", ball->GetLives(), ball->GetScore());
+		sprintf_s(title, "Lives: %d | Score: %d | Combo: x%d", ball->GetLives(), ball->GetScore(), ball->GetComboMult());
 		glfwSetWindowTitle(window, title);
 		lastDeltaTime = deltaTime;
 	}
@@ -91,6 +101,10 @@ public:
 			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
 			camera->GetViewMatrix()
 		);
+		// HUD for challenge mode only
+		if (gameModel == 2) {
+			hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult());
+		}
 	}
 
 	GLuint GetScore() {
@@ -107,6 +121,7 @@ public:
 
 	void SetGameModel(GLuint num) {
 		ball->SetGameModel(num);
+		gameModel = num;
 	}
 private:
 	void RenderDepth() {

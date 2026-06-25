@@ -11,6 +11,11 @@ private:
     Shader* shader;
     GLuint VAO, VBO_POS, VBO_COLOR;
 
+    // wave notification state
+    int waveNum;
+    float waveTimer;
+    static const float WAVE_DURATION;
+
     // 3x5 dot matrix patterns for digits 0-9
     bool digitPatterns[10][15] = {
         {1,1,1, 1,0,1, 1,0,1, 1,0,1, 1,1,1}, // 0
@@ -25,6 +30,36 @@ private:
         {1,1,1, 1,0,1, 1,1,1, 0,0,1, 1,1,1}, // 9
     };
 
+    // 5x5 dot matrix patterns for letters (W, A, V, E)
+    bool letterW[25] = {
+        1,0,0,0,1,
+        1,0,0,0,1,
+        1,0,1,0,1,
+        1,1,0,1,1,
+        1,0,0,0,1
+    };
+    bool letterA[25] = {
+        0,1,1,1,0,
+        1,0,0,0,1,
+        1,1,1,1,1,
+        1,0,0,0,1,
+        1,0,0,0,1
+    };
+    bool letterV[25] = {
+        1,0,0,0,1,
+        1,0,0,0,1,
+        1,0,0,0,1,
+        0,1,0,1,0,
+        0,0,1,0,0
+    };
+    bool letterE[25] = {
+        1,1,1,1,1,
+        1,0,0,0,0,
+        1,1,1,1,1,
+        1,0,0,0,0,
+        1,1,1,1,1
+    };
+
     void drawDigit(int digit, float startX, float startY, float dotSize, float gap) {
         if (digit < 0 || digit > 9) return;
         vector<float> posData;
@@ -34,7 +69,6 @@ private:
                 if (digitPatterns[digit][row * 3 + col]) {
                     float x = startX + col * (dotSize + gap);
                     float y = startY - row * (dotSize + gap);
-                    // 2 triangles = 6 vertices per dot
                     float verts[] = {
                         x, y,  x+dotSize, y,  x+dotSize, y-dotSize,
                         x, y,  x+dotSize, y-dotSize,  x, y-dotSize,
@@ -43,6 +77,40 @@ private:
                     for (int v = 0; v < 6; v++) {
                         colorData.push_back(1.0f); colorData.push_back(1.0f);
                         colorData.push_back(1.0f); colorData.push_back(1.0f);
+                    }
+                }
+            }
+        }
+        if (!posData.empty()) {
+            drawQuads(posData, colorData);
+        }
+    }
+
+    void drawLetter(char c, float startX, float startY, float dotSize, float gap,
+                    float r, float g, float b, float a) {
+        bool* pattern = nullptr;
+        switch (c) {
+        case 'W': pattern = letterW; break;
+        case 'A': pattern = letterA; break;
+        case 'V': pattern = letterV; break;
+        case 'E': pattern = letterE; break;
+        default: return;
+        }
+        vector<float> posData;
+        vector<float> colorData;
+        for (int row = 0; row < 5; row++) {
+            for (int col = 0; col < 5; col++) {
+                if (pattern[row * 5 + col]) {
+                    float x = startX + col * (dotSize + gap);
+                    float y = startY - row * (dotSize + gap);
+                    float verts[] = {
+                        x, y,  x+dotSize, y,  x+dotSize, y-dotSize,
+                        x, y,  x+dotSize, y-dotSize,  x, y-dotSize,
+                    };
+                    for (int v = 0; v < 12; v++) posData.push_back(verts[v]);
+                    for (int v = 0; v < 6; v++) {
+                        colorData.push_back(r); colorData.push_back(g);
+                        colorData.push_back(b); colorData.push_back(a);
                     }
                 }
             }
@@ -83,6 +151,20 @@ public:
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO_POS);
         glGenBuffers(1, &VBO_COLOR);
+        waveNum = 0;
+        waveTimer = 0.0f;
+    }
+
+    void ShowWave(int n) {
+        waveNum = n;
+        waveTimer = WAVE_DURATION;
+    }
+
+    void Update(float deltaTime) {
+        if (waveTimer > 0.0f) {
+            waveTimer -= deltaTime;
+            if (waveTimer < 0.0f) waveTimer = 0.0f;
+        }
     }
 
     void Render(int lives, int score, int comboMult) {
@@ -94,16 +176,15 @@ public:
         float heartX = -0.95f, heartY = 0.92f, heartW = 0.04f, heartH = 0.06f;
         for (int i = 0; i < 3; i++) {
             if (i < lives)
-                drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 1.0f, 0.15f, 0.15f, 1.0f); // red
+                drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 1.0f, 0.15f, 0.15f, 1.0f);
             else
-                drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 0.25f, 0.25f, 0.25f, 1.0f); // dark gray
+                drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 0.25f, 0.25f, 0.25f, 1.0f);
         }
 
         // === SCORE: dot-matrix digits ===
         float digitStartX = -0.95f, digitStartY = 0.78f;
         float dotSize = 0.015f, gap = 0.004f;
 
-        // Convert score to digits
         int s = score;
         int digits[10];
         int numDigits = 0;
@@ -116,19 +197,50 @@ public:
                 s /= 10;
             }
         }
-        // Draw digits from most significant to least
         for (int i = numDigits - 1; i >= 0; i--) {
             int col = numDigits - 1 - i;
             drawDigit(digits[i], digitStartX + col * (dotSize * 3 + gap * 2 + 0.02f), digitStartY, dotSize, gap);
         }
 
-        // === COMBO: show multiplier if > 1 ===
-        if (true) {  // always show combo
+        // === COMBO: show multiplier ===
+        if (true) {
             float cx = digitStartX + numDigits * (dotSize * 3 + gap * 2 + 0.02f) + 0.03f;
-            // x marker
             drawQuad(cx, digitStartY, dotSize * 2, dotSize * 5, 1.0f, 0.8f, 0.0f, 1.0f);
-            // multiplier number
             drawDigit(comboMult, cx + 0.03f, digitStartY, dotSize, gap);
+        }
+
+        // === WAVE NOTIFICATION: centered, fading text ===
+        if (waveTimer > 0.0f) {
+            float alpha = waveTimer / WAVE_DURATION;
+            // fade in fast, fade out slow
+            float fadeAlpha;
+            if (alpha > 0.7f) {
+                fadeAlpha = (1.0f - alpha) / 0.3f;  // fade in: 0→1
+            } else {
+                fadeAlpha = alpha / 0.7f;  // fade out: 1→0
+            }
+            // gold color for impact
+            float r = 1.0f, g = 0.75f, bCol = 0.1f;
+
+            float wDotSize = 0.032f, wGap = 0.009f;
+            // "WAVE" is 4 letters at 5x5 + 1 digit at 3x5 + 3 gaps + 1 space
+            float letterW5 = 5 * (wDotSize + wGap);    // width of a 5x5 letter
+            float letterW3 = 3 * (wDotSize + wGap);     // width of a 3x5 digit
+            float totalW = letterW5 * 4 + letterW3 + wGap * 4;
+            float startX = -totalW / 2.0f;
+            float startY = 0.25f;  // slightly above center
+
+            float xOff = 0.0f;
+            drawLetter('W', startX + xOff, startY, wDotSize, wGap, r, g, bCol, fadeAlpha);
+            xOff += letterW5 + wGap;
+            drawLetter('A', startX + xOff, startY, wDotSize, wGap, r, g, bCol, fadeAlpha);
+            xOff += letterW5 + wGap;
+            drawLetter('V', startX + xOff, startY, wDotSize, wGap, r, g, bCol, fadeAlpha);
+            xOff += letterW5 + wGap;
+            drawLetter('E', startX + xOff, startY, wDotSize, wGap, r, g, bCol, fadeAlpha);
+            xOff += letterW5 + wGap;
+            // draw the wave number digit
+            drawDigit(waveNum, startX + xOff, startY, wDotSize * 1.5f, wGap);
         }
 
         glEnable(GL_DEPTH_TEST);
@@ -136,5 +248,7 @@ public:
         shader->Unbind();
     }
 };
+
+const float HUD::WAVE_DURATION = 1.5f;
 
 #endif

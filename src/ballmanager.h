@@ -26,6 +26,7 @@ private:
 	GLuint score;
 	GLuint lives;
 	GLuint combo;						// �÷�
+	bool waveTriggered;
 	GLuint gameModel;					// ��Ϸģʽ
 	vec3 lightPos;						// ��Դλ��
 	mat4 lightSpaceMatrix;				// ��������������ת��Ϊ�Թ�ԴΪ���ĵ�����
@@ -47,6 +48,7 @@ public:
 		score = 0;
 			lives = 3;
 			combo = 0;
+		waveTriggered = false;
 		this->lightPos = vec3(0.0, 400.0, 150.0);
 		mat4 lightProjection = ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 500.0f);
 		mat4 lightView = lookAt(lightPos, vec3(0.0f), vec3(0.0, 1.0, 0.0));
@@ -76,25 +78,28 @@ public:
 					number--;
 					hitPositions.push_back(position[i]);
 					hitThisFrame = true;
-					int oldMult = 1;
-					if (combo >= 15) oldMult = 5;
-					else if (combo >= 9) oldMult = 4;
-					else if (combo >= 5) oldMult = 3;
-					else if (combo >= 2) oldMult = 2;
-					combo++;
-					// combo multiplier: x1 to x5 max
-					int mult = 1;
-					if (combo >= 15) mult = 5;
-					else if (combo >= 9) mult = 4;
-					else if (combo >= 5) mult = 3;
-					else if (combo >= 2) mult = 2;
-					score += mult;
-					if (mult > oldMult)
-						cout << "COMBO x" << mult << "!" << endl;
+					if (gameModel == 2) {
+						int oldMult = 1;
+						if (combo >= 15) oldMult = 5;
+						else if (combo >= 9) oldMult = 4;
+						else if (combo >= 5) oldMult = 3;
+						else if (combo >= 2) oldMult = 2;
+						combo++;
+						int mult = 1;
+						if (combo >= 15) mult = 5;
+						else if (combo >= 9) mult = 4;
+						else if (combo >= 5) mult = 3;
+						else if (combo >= 2) mult = 2;
+						score += mult;
+						if (mult > oldMult)
+							cout << "COMBO x" << mult << "!" << endl;
+					} else {
+						score++;
+					}
 				}
 			}
 			position = temp;
-			if (!hitThisFrame) combo = 0;
+			if (!hitThisFrame && gameModel == 2) combo = 0;
 		}
 
 		// ����������Ϸģʽ
@@ -121,6 +126,7 @@ public:
 					number--;
 					lives--;
 					combo = 0;
+		waveTriggered = false;
 					cout << "Ouch! Combo reset." << endl;
 				}
 			}
@@ -132,6 +138,7 @@ public:
 				maxNumber = 3;
 			}
 			AddBall();
+		waveTriggered = true;
 		}
 	}
 	// �ж���Ϸ�Ƿ����?
@@ -169,6 +176,16 @@ public:
 		return 1;
 	}
 	// ��ȾС��
+	vector<vec3> GetBallPositions() {
+		return position;
+	}
+	bool CheckWaveTrigger() {
+		if (waveTriggered) {
+			waveTriggered = false;
+			return true;
+		}
+		return false;
+	}
 	void Render(Shader* shader, GLuint depthMap = -1) {
 		for (GLuint i = 0; i < position.size(); i++) {
 			model = mat4(1.0);

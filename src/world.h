@@ -29,6 +29,7 @@ private:
 	GLuint gameModel;
 	bool wasLeftPressed;
 	float lastDeltaTime;
+	int waveNumber;
 
 	GLuint depthMap;
 	GLuint depthMapFBO;
@@ -56,6 +57,7 @@ public:
 			obstacles = new ObstacleManager();
 			scorePopups = new ScorePopupManager();
 			wasLeftPressed = false;
+			waveNumber = 0;
 
 		glGenFramebuffers(1, &depthMapFBO);
 		glGenTextures(1, &depthMap);
@@ -78,9 +80,14 @@ public:
 				vec3 obsHit = obstacles->CheckHit(camera->GetPosition(), camera->GetFront());
 				if (obsHit.x > -900) {
 					// hit obstacle: explode, block shot
-					particles->Explode(obsHit, vec4(0.8f, 0.3f, 0.1f, 1.0f), 50);
+					particles->Explode(obsHit, vec4(0.8f, 0.3f, 0.1f, 1.0f), 120, DEBRIS);
 					ball->Update(camera->GetPosition(), camera->GetFront(), false);
 				} else {
+					// muzzle flash for mode 2
+					if (gameModel == 2) {
+						vec3 muzzlePos = camera->GetPosition() + camera->GetFront() * 2.0f;
+						particles->Explode(muzzlePos, vec4(1.0f, 0.9f, 0.3f, 1.0f), 30, MUZZLE);
+					}
 					ball->Update(camera->GetPosition(), camera->GetFront(), true);
 				}
 			player->Update(deltaTime, true);
@@ -97,15 +104,32 @@ public:
 
 		vector<vec3> hits = ball->GetHitPositions();
 		for (vec3 hitPos : hits) {
-			particles->Explode(hitPos, vec4(0.5f, 0.7f, 0.95f, 1.0f), 80);
+			particles->Explode(hitPos, vec4(0.5f, 0.7f, 0.95f, 1.0f), 250, WATER);
 				// spawn floating score text
-				int mult = ball->GetComboMult();
-				scorePopups->Spawn(hitPos, mult, mult);
+				int mult = (gameModel == 2) ? ball->GetComboMult() : 1;
+				scorePopups->Spawn(hitPos, mult, (gameModel == 2) ? mult : 1);
 		}
 		particles->Update(deltaTime);
 		scorePopups->Update(deltaTime);
+		hud->Update(deltaTime);
+		// wave detection for mode 2: ballmanager sets flag when balls replenish
+		if (gameModel == 2 && ball->CheckWaveTrigger()) {
+			waveNumber++;
+			hud->ShowWave(waveNumber);
+		}
+		// ball trail particles for challenge mode
+		if (gameModel == 2) {
+			vector<vec3> ballPositions = ball->GetBallPositions();
+			for (vec3& bp : ballPositions) {
+				particles->EmitTrail(bp);
+			}
+		}
 		char title[64];
-		sprintf_s(title, "Lives: %d | Score: %d | Combo: x%d", ball->GetLives(), ball->GetScore(), ball->GetComboMult());
+		if (gameModel == 2) {
+			sprintf_s(title, "Lives: %d | Score: %d | Combo: x%d", ball->GetLives(), ball->GetScore(), ball->GetComboMult());
+		} else {
+			sprintf_s(title, "Score: %d", ball->GetScore());
+		}
 		glfwSetWindowTitle(window, title);
 		lastDeltaTime = deltaTime;
 	}

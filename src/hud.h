@@ -60,7 +60,7 @@ private:
         1,1,1,1,1
     };
 
-    void drawDigit(int digit, float startX, float startY, float dotSize, float gap) {
+    void drawDigit(int digit, float startX, float startY, float dotSize, float gap, float r, float g, float b, float a) {
         if (digit < 0 || digit > 9) return;
         vector<float> posData;
         vector<float> colorData;
@@ -75,8 +75,8 @@ private:
                     };
                     for (int v = 0; v < 12; v++) posData.push_back(verts[v]);
                     for (int v = 0; v < 6; v++) {
-                        colorData.push_back(1.0f); colorData.push_back(1.0f);
-                        colorData.push_back(1.0f); colorData.push_back(1.0f);
+                        colorData.push_back(r); colorData.push_back(g);
+                        colorData.push_back(b); colorData.push_back(a);
                     }
                 }
             }
@@ -167,46 +167,100 @@ public:
         }
     }
 
-    void Render(int lives, int score, int comboMult) {
+    void Render(int lives, int score, int comboMult, int hitsCount, bool isCasualMode) {
         shader->Bind();
         glBindVertexArray(VAO);
         glDisable(GL_DEPTH_TEST);
 
-        // === LIVES: 3 heart-like squares top-left ===
-        float heartX = -0.95f, heartY = 0.92f, heartW = 0.04f, heartH = 0.06f;
-        for (int i = 0; i < 3; i++) {
-            if (i < lives)
-                drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 1.0f, 0.15f, 0.15f, 1.0f);
-            else
-                drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 0.25f, 0.25f, 0.25f, 1.0f);
-        }
+        if (isCasualMode) {
+            // === 休闲模式显示 ===
 
-        // === SCORE: dot-matrix digits ===
-        float digitStartX = -0.95f, digitStartY = 0.78f;
-        float dotSize = 0.015f, gap = 0.004f;
+            // === 左上角：击中数和分数 ===
+            float leftX = -0.95f, leftY = 0.92f;
+            float dotSize = 0.012f, gap = 0.003f;
 
-        int s = score;
-        int digits[10];
-        int numDigits = 0;
-        if (s == 0) {
-            digits[0] = 0;
-            numDigits = 1;
-        } else {
-            while (s > 0 && numDigits < 10) {
-                digits[numDigits++] = s % 10;
-                s /= 10;
+            // "击中" 文字（用点阵模拟简化的字符）
+            // 击
+            float hitX = leftX, hitY = leftY;
+            drawDigit(0, hitX, hitY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f); // 击字左侧
+            drawDigit(7, hitX + 0.08f, hitY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f); // 击字右侧
+
+            // 击中数量（大一点）
+            int hits = hitsCount;
+            int hitDigits[10];
+            int numHitDigits = 0;
+            if (hits == 0) { hitDigits[0] = 0; numHitDigits = 1; }
+            else { while (hits > 0 && numHitDigits < 10) { hitDigits[numHitDigits++] = hits % 10; hits /= 10; } }
+            float hitValX = leftX + 0.18f;
+            for (int i = numHitDigits - 1; i >= 0; i--) {
+                drawDigit(hitDigits[i], hitValX, hitY, dotSize * 1.5f, gap * 1.5f, 1.0f, 1.0f, 0.3f, 1.0f);
+                hitValX += 0.06f;
             }
-        }
-        for (int i = numDigits - 1; i >= 0; i--) {
-            int col = numDigits - 1 - i;
-            drawDigit(digits[i], digitStartX + col * (dotSize * 3 + gap * 2 + 0.02f), digitStartY, dotSize, gap);
-        }
 
-        // === COMBO: show multiplier ===
-        if (true) {
-            float cx = digitStartX + numDigits * (dotSize * 3 + gap * 2 + 0.02f) + 0.03f;
-            drawQuad(cx, digitStartY, dotSize * 2, dotSize * 5, 1.0f, 0.8f, 0.0f, 1.0f);
-            drawDigit(comboMult, cx + 0.03f, digitStartY, dotSize, gap);
+            // 分数
+            float scoreY = leftY - 0.12f;
+            drawDigit(0, leftX, scoreY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f); // 分字左侧
+            drawDigit(7, leftX + 0.08f, scoreY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f); // 分字右侧
+
+            int s = score;
+            int scoreDigits[10];
+            int numScoreDigits = 0;
+            if (s == 0) { scoreDigits[0] = 0; numScoreDigits = 1; }
+            else { while (s > 0 && numScoreDigits < 10) { scoreDigits[numScoreDigits++] = s % 10; s /= 10; } }
+            float scoreValX = leftX + 0.18f;
+            for (int i = numScoreDigits - 1; i >= 0; i--) {
+                drawDigit(scoreDigits[i], scoreValX, scoreY, dotSize * 1.5f, gap * 1.5f, 1.0f, 1.0f, 0.3f, 1.0f);
+                scoreValX += 0.06f;
+            }
+
+            // === 中间靠上：醒目的 Combo 计分 ===
+            float comboY = 0.65f;
+            float comboDotSize = 0.03f;
+            float comboGap = 0.008f;
+
+            // "COMBO" 标题（用数字模拟）
+            drawDigit(7, -0.15f, comboY + 0.12f, comboDotSize * 0.5f, comboGap * 0.5f, 1.0f, 0.6f, 0.1f, 1.0f);
+            drawDigit(7, -0.08f, comboY + 0.12f, comboDotSize * 0.5f, comboGap * 0.5f, 1.0f, 0.6f, 0.1f, 1.0f);
+            drawDigit(7, -0.01f, comboY + 0.12f, comboDotSize * 0.5f, comboGap * 0.5f, 1.0f, 0.6f, 0.1f, 1.0f);
+            drawDigit(7, 0.06f, comboY + 0.12f, comboDotSize * 0.5f, comboGap * 0.5f, 1.0f, 0.6f, 0.1f, 1.0f);
+
+            // Combo 数字（金色，大，发光效果）
+            drawDigit(comboMult, -0.1f, comboY, comboDotSize, comboGap, 1.0f, 0.85f, 0.0f, 1.0f);
+
+            // "x" 符号
+            drawQuad(0.15f, comboY + 0.02f, 0.01f, 0.04f, 1.0f, 0.85f, 0.0f, 1.0f);
+
+        }
+        else {
+            // === 战斗模式显示：生命值 ===
+            float heartX = -0.95f, heartY = 0.92f, heartW = 0.04f, heartH = 0.06f;
+            for (int i = 0; i < 3; i++) {
+                if (i < lives)
+                    drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 1.0f, 0.15f, 0.15f, 1.0f);
+                else
+                    drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 0.25f, 0.25f, 0.25f, 1.0f);
+            }
+
+            // 分数
+            float digitStartX = -0.95f, digitStartY = 0.78f;
+            float dotSize = 0.015f, gap = 0.004f;
+
+            int s = score;
+            int digits[10];
+            int numDigits = 0;
+            if (s == 0) { digits[0] = 0; numDigits = 1; }
+            else { while (s > 0 && numDigits < 10) { digits[numDigits++] = s % 10; s /= 10; } }
+
+            for (int i = numDigits - 1; i >= 0; i--) {
+                int col = numDigits - 1 - i;
+                drawDigit(digits[i], digitStartX + col * (dotSize * 3 + gap * 2 + 0.02f), digitStartY, dotSize, gap, 1.0f, 1.0f, 1.0f, 1.0f);
+            }
+
+            if (comboMult > 1) {
+                float cx = digitStartX + numDigits * (dotSize * 3 + gap * 2 + 0.02f) + 0.03f;
+                drawQuad(cx, digitStartY, dotSize * 2, dotSize * 5, 1.0f, 0.8f, 0.0f, 1.0f);
+                drawDigit(comboMult, cx + 0.03f, digitStartY, dotSize, gap, 1.0f, 0.8f, 0.0f, 1.0f);
+            }
         }
 
         // === WAVE NOTIFICATION: centered, fading text ===
@@ -240,7 +294,7 @@ public:
             drawLetter('E', startX + xOff, startY, wDotSize, wGap, r, g, bCol, fadeAlpha);
             xOff += letterW5 + wGap;
             // draw the wave number digit
-            drawDigit(waveNum, startX + xOff, startY, wDotSize * 1.5f, wGap);
+            drawDigit(waveNum, startX + xOff, startY, wDotSize * 1.5f, wGap, r, g, bCol, fadeAlpha);
         }
 
         glEnable(GL_DEPTH_TEST);

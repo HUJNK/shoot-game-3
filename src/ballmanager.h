@@ -18,25 +18,37 @@ private:
 
 	Model* ball;
 	Shader* ballShader;
-	GLuint number;						// ��ǰС����Ŀ
-	GLuint maxNumber;					// С��������?
-	vec3 basicPos;						// С���������?
-	vector<vec3> position;				// ���ϴ��ڵ�С������
-	float moveSpeed;					// С���ƶ��ٶ�
+	GLuint number;
+	GLuint maxNumber;
+	vec3 basicPos;
+	vector<vec3> position;
+	float moveSpeed;
 	GLuint score;
 	GLuint lives;
-	GLuint combo;						// �÷�
+	GLuint combo;
 	bool waveTriggered;
-	GLuint gameModel;					// ��Ϸģʽ
-	vec3 lightPos;						// ��Դλ��
-	mat4 lightSpaceMatrix;				// ��������������ת��Ϊ�Թ�ԴΪ���ĵ�����
+	GLuint gameModel;
+	GLuint totalHits;
+	vec3 lightPos;
+	mat4 lightSpaceMatrix;
 
 	Camera* camera;
 	vector<vec3> hitPositions;
-	// ģ�ͱ任����
 	mat4 model;
 	mat4 projection;
 	mat4 view;
+
+	GLuint spikeVAO, spikeVBO, spikeEBO;
+	GLuint spikeIndexCount;
+	vector<vec3> fixedSpikePositions;
+
+	float WALL_TOP_Y;
+	float SPIKE_TRIGGER_MIN_Y;
+	float SPIKE_TRIGGER_MAX_Y;
+	float BALL_GEN_HALF_WIDTH;
+	int SPIKE_ROWS;
+	int SPIKE_COLS;
+
 public:
 	BallManager(vec2 windowSize, Camera* camera) {
 		this->windowSize = windowSize;
@@ -46,25 +58,36 @@ public:
 		maxNumber = 3;
 		moveSpeed = 0.1f;
 		score = 0;
-			lives = 3;
-			combo = 0;
+		lives = 3;
+		combo = 0;
+		totalHits = 0;
 		waveTriggered = false;
 		this->lightPos = vec3(0.0, 400.0, 150.0);
 		mat4 lightProjection = ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 500.0f);
 		mat4 lightView = lookAt(lightPos, vec3(0.0f), vec3(0.0, 1.0, 0.0));
 		this->lightSpaceMatrix = lightProjection * lightView;
+
+		WALL_TOP_Y = 55.0f;
+		SPIKE_TRIGGER_MIN_Y = 45.0f;
+		SPIKE_TRIGGER_MAX_Y = 55.0f;
+		BALL_GEN_HALF_WIDTH = 30.0f;
+		SPIKE_ROWS = 2;
+		SPIKE_COLS = 12;
+
+		InitFixedSpikes();
 		AddBall();
 		LoadModel();
+		InitSpikeGeometry();
 	}
-	// ������Ϸģʽ
+
 	void SetGameModel(GLuint num) {
 		gameModel = num;
 	}
-	// ���±任�����ж�����Ƿ����С��
+
 	void Update(vec3 pos, vec3 dir, bool isShoot) {
 		this->view = camera->GetViewMatrix();
 		hitPositions.clear();
-			bool hitThisFrame = false;
+		bool hitThisFrame = false;
 		this->projection = perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f);
 
 		if (isShoot) {
@@ -91,10 +114,12 @@ public:
 						else if (combo >= 5) mult = 3;
 						else if (combo >= 2) mult = 2;
 						score += mult;
+						totalHits++;
 						if (mult > oldMult)
 							cout << "COMBO x" << mult << "!" << endl;
 					} else {
 						score++;
+						totalHits++;
 					}
 				}
 			}
@@ -102,23 +127,31 @@ public:
 			if (!hitThisFrame && gameModel == 2) combo = 0;
 		}
 
-		// ����������Ϸģʽ
 		if (gameModel == 1)
 		{
-			// ����ģʽ��С������Ư��
-			for (GLuint i = 0; i < position.size(); i++)
+			for (GLuint i = 0; i < position.size(); )
 			{
 				position[i].y += moveSpeed;
-				// �����ϱ߽磬���õ��·�ѭ��
-				if (position[i].y > 55.0f)
-				{
+
+				if (position[i].y >= SPIKE_TRIGGER_MIN_Y && position[i].y <= SPIKE_TRIGGER_MAX_Y) {
+					hitPositions.push_back(position[i]);
+					score++;
+					totalHits++;
+					hitThisFrame = true;
+					combo++;
+					number--;
+					position.erase(position.begin() + i);
+					continue;
+				}
+
+				if (position[i].y > WALL_TOP_Y + 5.0f) {
 					position[i].y = -5.0f;
 				}
+				i++;
 			}
 		}
 		else
 		{
-			// tiao zhan mo shi: qiu fei guo kou ming
 			for (int i = (int)position.size() - 1; i >= 0; i--) {
 				position[i].z += moveSpeed;
 				if (position[i].z >= 70) {
@@ -126,7 +159,7 @@ public:
 					number--;
 					lives--;
 					combo = 0;
-		waveTriggered = false;
+					waveTriggered = false;
 					cout << "Ouch! Combo reset." << endl;
 				}
 			}
@@ -138,20 +171,18 @@ public:
 				maxNumber = 3;
 			}
 			AddBall();
-		waveTriggered = true;
+			waveTriggered = true;
 		}
 	}
-	// �ж���Ϸ�Ƿ����?
+
 	bool IsOver() {
 		if (gameModel == 1) {
-			// normal mode: ball passes = game over
 			if (position.size() > 0)
 				if (position[0].z >= 70)
 					return true;
 			return false;
 		}
 		else {
-			// challenge mode: lives depleted = game over
 			return lives <= 0;
 		}
 	}
@@ -175,7 +206,9 @@ public:
 		if (combo >= 2) return 2;
 		return 1;
 	}
-	// ��ȾС��
+	GLuint GetTotalHits() {
+		return totalHits;
+	}
 	vector<vec3> GetBallPositions() {
 		return position;
 	}
@@ -186,6 +219,7 @@ public:
 		}
 		return false;
 	}
+
 	void Render(Shader* shader, GLuint depthMap = -1) {
 		for (GLuint i = 0; i < position.size(); i++) {
 			model = mat4(1.0);
@@ -196,6 +230,7 @@ public:
 				shader->Bind();
 				shader->SetMat4("projection", projection);
 				shader->SetMat4("view", view);
+				shader->SetVec3("color", vec3(0.2, 0.5, 0.5f));
 			}
 			else {
 				shader->Bind();
@@ -205,10 +240,28 @@ public:
 			glBindTexture(GL_TEXTURE_2D, depthMap);
 			glBindVertexArray(ball->GetVAO());
 			glDrawElements(GL_TRIANGLES, static_cast<GLuint>(ball->GetIndices().size()), GL_UNSIGNED_INT, 0);
-
 			shader->Unbind();
 			glBindVertexArray(0);
 			model = mat4(1.0);
+		}
+
+		if (gameModel == 1 && spikeVAO != 0 && ballShader) {
+			ballShader->Bind();
+			ballShader->SetMat4("projection", projection);
+			ballShader->SetMat4("view", view);
+			ballShader->SetVec3("color", vec3(0.8, 0.1, 0.1));
+			glBindVertexArray(spikeVAO);
+
+			for (const auto& spikePos : fixedSpikePositions) {
+				mat4 spikeModelMat = mat4(1.0);
+				spikeModelMat = translate(spikeModelMat, spikePos);
+				spikeModelMat = rotate(spikeModelMat, radians(180.0f), vec3(1, 0, 0));
+				ballShader->SetMat4("model", spikeModelMat);
+				glDrawElements(GL_TRIANGLES, spikeIndexCount, GL_UNSIGNED_INT, 0);
+			}
+
+			ballShader->Unbind();
+			glBindVertexArray(0);
 		}
 	}
 private:
@@ -223,7 +276,7 @@ private:
 		ballShader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 		ballShader->Unbind();
 	}
-	// ����С��
+
 	void AddBall() {
 		for (GLuint i = number; i < maxNumber; i++) {
 			float judgeX = rand() % 2;
@@ -238,7 +291,7 @@ private:
 				i--;
 		}
 	}
-	// ����Ѵ���С���λ�ã��������ӵ�С������ص�?
+
 	bool CheckPosition(vec3 pos) {
 		for (GLuint i = 0; i < position.size(); i++) {
 			float away = pow(position[i].x - pos.x, 2) + pow(position[i].y - pos.y, 2);
@@ -246,6 +299,73 @@ private:
 				return false;
 		}
 		return true;
+	}
+
+	void InitFixedSpikes() {
+		fixedSpikePositions.clear();
+		float startX = -BALL_GEN_HALF_WIDTH + (BALL_GEN_HALF_WIDTH * 2) / (SPIKE_COLS + 1);
+		float startZ = basicPos.z - 5.0f;
+		float zOffset = 10.0f;
+
+		for (int row = 0; row < SPIKE_ROWS; row++) {
+			float currentZ = (row == 0) ? startZ : startZ + zOffset;
+			for (int col = 0; col < SPIKE_COLS; col++) {
+				float offsetX = (col + 1) * ((BALL_GEN_HALF_WIDTH * 2) / (SPIKE_COLS + 1));
+				float x = -BALL_GEN_HALF_WIDTH + offsetX;
+				fixedSpikePositions.push_back(vec3(x, WALL_TOP_Y, currentZ));
+			}
+		}
+	}
+
+	void InitSpikeGeometry() {
+		const int segments = 8;
+		const float radius = 2.5f;
+		const float height = 6.0f;
+
+		struct Vertex {
+			vec3 position;
+			vec3 normal;
+			vec2 texCoords;
+		};
+
+		vector<Vertex> vertices;
+		vector<unsigned int> indices;
+
+		vertices.push_back({ vec3(0.0f, height, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec2(0.5f, 0.0f) });
+
+		for (int i = 0; i <= segments; i++) {
+			float angle = 2.0f * 3.1415926f * i / segments;
+			float x = radius * cos(angle);
+			float z = radius * sin(angle);
+			vertices.push_back({ vec3(x, 0.0f, z), vec3(0.0f, 1.0f, 0.0f), vec2((cos(angle) + 1) / 2, (sin(angle) + 1) / 2) });
+		}
+
+		for (int i = 0; i < segments; i++) {
+			indices.push_back(0);
+			indices.push_back(i + 2);
+			indices.push_back(i + 1 + 2);
+		}
+
+		spikeIndexCount = static_cast<unsigned int>(indices.size());
+
+		glGenVertexArrays(1, &spikeVAO);
+		glGenBuffers(1, &spikeVBO);
+		glGenBuffers(1, &spikeEBO);
+
+		glBindVertexArray(spikeVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, spikeVBO);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, spikeEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec3)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(2 * sizeof(vec3)));
+
+		glBindVertexArray(0);
 	}
 };
 

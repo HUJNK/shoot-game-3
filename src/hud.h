@@ -209,19 +209,16 @@ public:
         glDisable(GL_DEPTH_TEST);
 
         if (isCasualMode) {
-            // === 休闲模式显示 ===
-
-            // === 左上角：击中数和分数 ===
+            // === Casual Mode HUD ===
             float leftX = -0.95f, leftY = 0.92f;
             float dotSize = 0.012f, gap = 0.003f;
 
-            // "击中" 文字（用点阵模拟简化的字符）
-            // 击
-            float hitX = leftX, hitY = leftY;
-            drawDigit(0, hitX, hitY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f); // 击字左侧
-            drawDigit(7, hitX + 0.08f, hitY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f); // 击字右侧
+            // hits label (simulated Chinese chars via digits)
+            float labelStartX = leftX, labelStartY = leftY;
+            drawDigit(0, labelStartX, labelStartY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f);
+            drawDigit(7, labelStartX + 0.08f, labelStartY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f);
 
-            // 击中数量（大一点）
+            // hits count (larger)
             int hits = hitsCount;
             int hitDigits[10];
             int numHitDigits = 0;
@@ -229,11 +226,11 @@ public:
             else { while (hits > 0 && numHitDigits < 10) { hitDigits[numHitDigits++] = hits % 10; hits /= 10; } }
             float hitValX = leftX + 0.18f;
             for (int i = numHitDigits - 1; i >= 0; i--) {
-                drawDigit(hitDigits[i], hitValX, hitY, dotSize * 1.5f, gap * 1.5f, 1.0f, 1.0f, 0.3f, 1.0f);
+                drawDigit(hitDigits[i], hitValX, labelStartY, dotSize * 1.5f, gap * 1.5f, 1.0f, 1.0f, 0.3f, 1.0f);
                 hitValX += 0.06f;
             }
 
-            // 分数
+            // score label
             float scoreY = leftY - 0.12f;
             drawDigit(0, leftX, scoreY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f); // 分字左侧
             drawDigit(7, leftX + 0.08f, scoreY, dotSize, gap, 0.3f, 0.7f, 0.9f, 1.0f); // 分字右侧
@@ -249,26 +246,26 @@ public:
                 scoreValX += 0.06f;
             }
 
-            // === 中间靠上：醒目的 Combo 计分 ===
+            // === Center: Combo score ===
             float comboY = 0.65f;
             float comboDotSize = 0.03f;
             float comboGap = 0.008f;
 
-            // "COMBO" 标题（用数字模拟）
+            // "COMBO" title (simulated with digits)
             drawDigit(7, -0.15f, comboY + 0.12f, comboDotSize * 0.5f, comboGap * 0.5f, 1.0f, 0.6f, 0.1f, 1.0f);
             drawDigit(7, -0.08f, comboY + 0.12f, comboDotSize * 0.5f, comboGap * 0.5f, 1.0f, 0.6f, 0.1f, 1.0f);
             drawDigit(7, -0.01f, comboY + 0.12f, comboDotSize * 0.5f, comboGap * 0.5f, 1.0f, 0.6f, 0.1f, 1.0f);
             drawDigit(7, 0.06f, comboY + 0.12f, comboDotSize * 0.5f, comboGap * 0.5f, 1.0f, 0.6f, 0.1f, 1.0f);
 
-            // Combo 数字（金色，大，发光效果）
+            // Combo multiplier (gold, large)
             drawDigit(comboMult, -0.1f, comboY, comboDotSize, comboGap, 1.0f, 0.85f, 0.0f, 1.0f);
 
-            // "x" 符号
+            // "x" mark
             drawQuad(0.15f, comboY + 0.02f, 0.01f, 0.04f, 1.0f, 0.85f, 0.0f, 1.0f);
 
         }
         else {
-            // === 战斗模式显示：生命值 ===
+            // === Challenge Mode: Lives ===
             float heartX = -0.95f, heartY = 0.92f, heartW = 0.04f, heartH = 0.06f;
             for (int i = 0; i < 3; i++) {
                 if (i < lives)
@@ -277,7 +274,7 @@ public:
                     drawQuad(heartX + i * 0.055f, heartY, heartW, heartH, 0.25f, 0.25f, 0.25f, 1.0f);
             }
 
-            // 分数
+            // Score
             float digitStartX = -0.95f, digitStartY = 0.78f;
             float dotSize = 0.015f, gap = 0.004f;
 

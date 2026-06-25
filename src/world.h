@@ -11,6 +11,7 @@
 #include "hud.h"
 #include "obstacle.h"
 #include "scorepopup.h"
+#include "item.h"
 
 class World {
 private:
@@ -30,6 +31,11 @@ private:
 	bool wasLeftPressed;
 	float lastDeltaTime;
 	int waveNumber;
+	ItemManager* items;
+	float rapidFireTimer;
+	float rapidFireCooldown;
+	float slowMotionTimer;
+	float gameTime;
 
 	GLuint depthMap;
 	GLuint depthMapFBO;
@@ -58,6 +64,11 @@ public:
 			scorePopups = new ScorePopupManager();
 			wasLeftPressed = false;
 			waveNumber = 0;
+			items = new ItemManager();
+			rapidFireTimer = 0.0f;
+			rapidFireCooldown = 0.0f;
+			slowMotionTimer = 0.0f;
+			gameTime = 0.0f;
 
 		glGenFramebuffers(1, &depthMapFBO);
 		glGenTextures(1, &depthMap);
@@ -70,6 +81,7 @@ public:
 	}
 
 	void Update(float deltaTime) {
+		gameTime += deltaTime;
 		camera->Update(deltaTime);
 		bool leftPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 		bool justShot = leftPressed && !wasLeftPressed;
@@ -96,11 +108,64 @@ public:
 			ball->Update(camera->GetPosition(), camera->GetFront(), false);
 			player->Update(deltaTime, false);
 		}
+		// item hit check for mode 2 (every frame)
+		if (gameModel == 2) {
+			int itemHit = items->CheckHit(camera->GetPosition(), camera->GetFront());
+			if (itemHit >= 0) {
+				vec3 hitPos = camera->GetPosition() + camera->GetFront() * 20.0f;
+				particles->Explode(hitPos, vec4(1.0f, 0.85f, 0.2f, 1.0f), 80, WATER);
+				switch (itemHit) {
+				case ITEM_RAPID_FIRE:
+					rapidFireTimer = 2.0f;
+					rapidFireCooldown = 0.0f;
+					break;
+				case ITEM_SLOW_MOTION:
+					slowMotionTimer = 3.0f;
+					ball->SetSlowMotion(true);
+					break;
+				case ITEM_BONUS_SCORE:
+					ball->AddScore(10);
+					break;
+				case ITEM_EXTRA_LIFE:
+					ball->AddLife(1);
+					break;
+				}
+			}
+		}
 		// spawn obstacles for mode 2 when wave cleared
 		if (gameModel == 2 && obstacles->IsEmpty()) {
 			obstacles->SpawnWave();
 		}
 		place->Update();
+
+		// rapid fire: auto-shoot while timer active
+		if (gameModel == 2 && rapidFireTimer > 0.0f) {
+			rapidFireCooldown -= deltaTime;
+			if (rapidFireCooldown <= 0.0f) {
+				rapidFireCooldown = 0.15f;
+				vec3 obsHit = obstacles->CheckHit(camera->GetPosition(), camera->GetFront());
+				if (obsHit.x > -900) {
+					particles->Explode(obsHit, vec4(0.8f, 0.3f, 0.1f, 1.0f), 120, DEBRIS);
+					ball->Update(camera->GetPosition(), camera->GetFront(), false);
+				} else {
+					ball->Update(camera->GetPosition(), camera->GetFront(), true);
+				}
+				player->Update(deltaTime, true);
+			}
+		}
+
+		// update effect timers
+		if (rapidFireTimer > 0.0f) {
+			rapidFireTimer -= deltaTime;
+			if (rapidFireTimer <= 0.0f) rapidFireTimer = 0.0f;
+		}
+		if (slowMotionTimer > 0.0f) {
+			slowMotionTimer -= deltaTime;
+			if (slowMotionTimer <= 0.0f) {
+				slowMotionTimer = 0.0f;
+				ball->SetSlowMotion(false);
+			}
+		}
 
 		vector<vec3> hits = ball->GetHitPositions();
 		for (vec3 hitPos : hits) {
@@ -123,10 +188,14 @@ public:
 			for (vec3& bp : ballPositions) {
 				particles->EmitTrail(bp);
 			}
+			items->Update(deltaTime, particles);
 		}
-		char title[64];
+		char title[128];
 		if (gameModel == 2) {
-			sprintf_s(title, "Lives: %d | Score: %d | Combo: x%d", ball->GetLives(), ball->GetScore(), ball->GetComboMult());
+			char fx[32] = "";
+			if (rapidFireTimer > 0.0f) strcat_s(fx, " [RAPID]");
+			if (slowMotionTimer > 0.0f) strcat_s(fx, " [SLOW]");
+			sprintf_s(title, "Lives: %d | Score: %d | Combo: x%d%s", ball->GetLives(), ball->GetScore(), ball->GetComboMult(), fx);
 		} else {
 			sprintf_s(title, "Score: %d", ball->GetScore());
 		}
@@ -146,6 +215,11 @@ public:
 			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
 			camera->GetViewMatrix()
 		);
+		items->Render(
+			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
+			camera->GetViewMatrix(),
+			gameTime
+		);
 		ball->Render(NULL, depthMap);
 		particles->Render(
 			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
@@ -155,9 +229,16 @@ public:
 			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
 			camera->GetViewMatrix()
 		);
+<<<<<<< HEAD
 		// HUD: mode 1 shows casual (hits+score+combo), mode 2 shows challenge (lives+score+combo)
 		hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult(),
 			        (int)ball->GetTotalHits(), gameModel == 1);
+=======
+		// HUD for challenge mode only
+		if (gameModel == 2) {
+			hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult(), (int)ball->GetTotalHits(), gameModel == 1, rapidFireTimer, slowMotionTimer);
+		}
+>>>>>>> 01b1d0c (道具系统 Power-up System (仅模式二))
 	}
 
 	GLuint GetScore() {

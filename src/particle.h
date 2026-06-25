@@ -78,6 +78,26 @@ public:
 		}
 	}
 
+	void EmitSparkle(vec3 position, vec4 color) {
+		int n = 3 + rand() % 3;
+		for (int i = 0; i < n; i++) {
+			Particle p;
+			p.position = position;
+			p.velocity = vec3(
+				(rand() % 100 - 50) / 40.0f,
+				(rand() % 100 - 50) / 40.0f,
+				(rand() % 100 - 50) / 40.0f
+			);
+			p.color = color;
+			p.size = 1.5f + (rand() % 100) / 60.0f;
+			p.maxLife = 0.35f + (rand() % 100) / 400.0f;
+			p.life = p.maxLife;
+			p.type = TRAIL;
+			p.hasBounced = false;
+			particles.push_back(p);
+		}
+	}
+
 	void Update(float deltaTime) {
 		for (int i = (int)particles.size() - 1; i >= 0; i--) {
 			particles[i].life -= deltaTime;

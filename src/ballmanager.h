@@ -27,6 +27,7 @@ private:
 	GLuint lives;
 	GLuint combo;
 	bool waveTriggered;
+	bool slowMotion;
 	GLuint gameModel;
 	GLuint totalHits;
 	vec3 lightPos;
@@ -62,6 +63,7 @@ public:
 		combo = 0;
 		totalHits = 0;
 		waveTriggered = false;
+		slowMotion = false;
 		this->lightPos = vec3(0.0, 400.0, 150.0);
 		mat4 lightProjection = ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 500.0f);
 		mat4 lightView = lookAt(lightPos, vec3(0.0f), vec3(0.0, 1.0, 0.0));
@@ -152,8 +154,9 @@ public:
 		}
 		else
 		{
-			for (int i = (int)position.size() - 1; i >= 0; i--) {
-				position[i].z += moveSpeed;
+			float effSpeed = slowMotion ? moveSpeed * 0.4f : moveSpeed;
+		for (int i = (int)position.size() - 1; i >= 0; i--) {
+				position[i].z += effSpeed;
 				if (position[i].z >= 70) {
 					position.erase(position.begin() + i);
 					number--;
@@ -187,6 +190,9 @@ public:
 		}
 	}
 
+	void AddScore(int n) { score += n; }
+	void AddLife(int n) { if (lives < 3) lives += n; }
+	void SetSlowMotion(bool on) { slowMotion = on; }
 	GLuint GetScore() {
 		return score;
 	}

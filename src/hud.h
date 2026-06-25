@@ -59,6 +59,33 @@ private:
         1,0,0,0,0,
         1,1,1,1,1
     };
+    bool letterR[25] = {
+        1,1,1,1,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1
+    };
+    bool letterP[25] = {
+        1,1,1,1,1, 1,0,0,0,1, 1,1,1,1,1, 1,0,0,0,0, 1,0,0,0,0
+    };
+    bool letterI[25] = {
+        1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1
+    };
+    bool letterD[25] = {
+        1,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,0
+    };
+    bool letterF[25] = {
+        1,1,1,1,1, 1,0,0,0,0, 1,1,1,1,0, 1,0,0,0,0, 1,0,0,0,0
+    };
+    bool letterS[25] = {
+        0,1,1,1,1, 1,0,0,0,0, 0,1,1,1,0, 0,0,0,0,1, 1,1,1,1,0
+    };
+    bool letterL[25] = {
+        1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,0,0,0,0, 1,1,1,1,1
+    };
+    bool letterO[25] = {
+        0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0
+    };
+    bool letterM[25] = {
+        1,0,0,0,1, 1,1,0,1,1, 1,0,1,0,1, 1,0,0,0,1, 1,0,0,0,1
+    };
 
     void drawDigit(int digit, float startX, float startY, float dotSize, float gap, float r, float g, float b, float a) {
         if (digit < 0 || digit > 9) return;
@@ -94,6 +121,15 @@ private:
         case 'A': pattern = letterA; break;
         case 'V': pattern = letterV; break;
         case 'E': pattern = letterE; break;
+        case 'R': pattern = letterR; break;
+        case 'P': pattern = letterP; break;
+        case 'I': pattern = letterI; break;
+        case 'D': pattern = letterD; break;
+        case 'F': pattern = letterF; break;
+        case 'S': pattern = letterS; break;
+        case 'L': pattern = letterL; break;
+        case 'O': pattern = letterO; break;
+        case 'M': pattern = letterM; break;
         default: return;
         }
         vector<float> posData;
@@ -167,7 +203,7 @@ public:
         }
     }
 
-    void Render(int lives, int score, int comboMult, int hitsCount, bool isCasualMode) {
+    void Render(int lives, int score, int comboMult, int hitsCount, bool isCasualMode, float rapidTimer = 0.0f, float slowTimer = 0.0f) {
         shader->Bind();
         glBindVertexArray(VAO);
         glDisable(GL_DEPTH_TEST);
@@ -261,6 +297,23 @@ public:
                 drawQuad(cx, digitStartY, dotSize * 2, dotSize * 5, 1.0f, 0.8f, 0.0f, 1.0f);
                 drawDigit(comboMult, cx + 0.03f, digitStartY, dotSize, gap, 1.0f, 0.8f, 0.0f, 1.0f);
             }
+        }
+
+        // === EFFECT INDICATOR ===
+        if (rapidTimer > 0.0f) {
+            float fxDot = 0.012f, fxGap = 0.003f, fxY = 0.68f, fxX = -0.95f, a = 1.0f;
+            drawLetter('R', fxX, fxY, fxDot, fxGap, 1.0f, 0.55f, 0.0f, a); fxX += 5*(fxDot+fxGap)+fxGap;
+            drawLetter('A', fxX, fxY, fxDot, fxGap, 1.0f, 0.55f, 0.0f, a); fxX += 5*(fxDot+fxGap)+fxGap;
+            drawLetter('P', fxX, fxY, fxDot, fxGap, 1.0f, 0.55f, 0.0f, a); fxX += 5*(fxDot+fxGap)+fxGap;
+            drawLetter('I', fxX, fxY, fxDot, fxGap, 1.0f, 0.55f, 0.0f, a); fxX += 5*(fxDot+fxGap)+fxGap;
+            drawLetter('D', fxX, fxY, fxDot, fxGap, 1.0f, 0.55f, 0.0f, a);
+        }
+        if (slowTimer > 0.0f) {
+            float fxDot = 0.012f, fxGap = 0.003f, fxY = 0.62f, fxX = -0.95f, a = 1.0f;
+            drawLetter('S', fxX, fxY, fxDot, fxGap, 0.3f, 0.6f, 1.0f, a); fxX += 5*(fxDot+fxGap)+fxGap;
+            drawLetter('L', fxX, fxY, fxDot, fxGap, 0.3f, 0.6f, 1.0f, a); fxX += 5*(fxDot+fxGap)+fxGap;
+            drawLetter('O', fxX, fxY, fxDot, fxGap, 0.3f, 0.6f, 1.0f, a); fxX += 5*(fxDot+fxGap)+fxGap;
+            drawLetter('W', fxX, fxY, fxDot, fxGap, 0.3f, 0.6f, 1.0f, a);
         }
 
         // === WAVE NOTIFICATION: centered, fading text ===

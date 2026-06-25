@@ -22,6 +22,9 @@ private:
 	GLuint maxNumber;
 	vec3 basicPos;
 	vector<vec3> position;
+	vector<vec3> ballColors;
+	vector<int> ballScores;
+	vector<int> hitScores;
 	float moveSpeed;
 	GLuint score;
 	GLuint lives;
@@ -89,6 +92,7 @@ public:
 	void Update(vec3 pos, vec3 dir, bool isShoot) {
 		this->view = camera->GetViewMatrix();
 		hitPositions.clear();
+		hitScores.clear();
 		bool hitThisFrame = false;
 		this->projection = perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f);
 
@@ -115,18 +119,23 @@ public:
 						else if (combo >= 9) mult = 4;
 						else if (combo >= 5) mult = 3;
 						else if (combo >= 2) mult = 2;
-						score += mult;
+						int basePt = ballScores[i];
+						hitScores.push_back(basePt);
+						score += basePt * mult;
 						totalHits++;
 						if (mult > oldMult)
 							cout << "COMBO x" << mult << "!" << endl;
 					} else {
-						score++;
+						int basePt = ballScores[i];
+						hitScores.push_back(basePt);
+						score += basePt;
 						totalHits++;
+						combo++;
 					}
 				}
 			}
 			position = temp;
-			if (!hitThisFrame && gameModel == 2) combo = 0;
+			if (!hitThisFrame) combo = 0;
 		}
 
 		if (gameModel == 1)
@@ -137,11 +146,13 @@ public:
 
 				if (position[i].y >= SPIKE_TRIGGER_MIN_Y && position[i].y <= SPIKE_TRIGGER_MAX_Y) {
 					hitPositions.push_back(position[i]);
+					hitScores.push_back(1);
 					score++;
 					totalHits++;
 					hitThisFrame = true;
-					combo++;
 					number--;
+					ballColors.erase(ballColors.begin() + i);
+					ballScores.erase(ballScores.begin() + i);
 					position.erase(position.begin() + i);
 					continue;
 				}
@@ -158,6 +169,8 @@ public:
 		for (int i = (int)position.size() - 1; i >= 0; i--) {
 				position[i].z += effSpeed;
 				if (position[i].z >= 70) {
+					ballColors.erase(ballColors.begin() + i);
+					ballScores.erase(ballScores.begin() + i);
 					position.erase(position.begin() + i);
 					number--;
 					lives--;
@@ -199,6 +212,9 @@ public:
 	vector<vec3> GetHitPositions() {
 		return hitPositions;
 	}
+	vector<int> GetHitScores() {
+		return hitScores;
+	}
 	GLuint GetLives() {
 		return lives;
 	}
@@ -206,11 +222,7 @@ public:
 		return combo;
 	}
 	GLuint GetComboMult() {
-		if (combo >= 15) return 5;
-		if (combo >= 9) return 4;
-		if (combo >= 5) return 3;
-		if (combo >= 2) return 2;
-		return 1;
+		return combo > 0 ? combo : 1;
 	}
 	GLuint GetTotalHits() {
 		return totalHits;
@@ -236,7 +248,7 @@ public:
 				shader->Bind();
 				shader->SetMat4("projection", projection);
 				shader->SetMat4("view", view);
-				shader->SetVec3("color", vec3(0.2, 0.5, 0.5f));
+				shader->SetVec3("color", ballColors[i]);
 			}
 			else {
 				shader->Bind();
@@ -291,6 +303,11 @@ private:
 			vec3 pos = vec3(basicPos.x + x, basicPos.y + y, basicPos.z);
 			if (CheckPosition(pos)) {
 				position.push_back(pos);
+				int r = rand() % 100;
+				if (r < 5)       { ballColors.push_back(vec3(1.0f, 0.2f, 0.2f)); ballScores.push_back(5); }
+				else if (r < 20) { ballColors.push_back(vec3(1.0f, 0.75f, 0.1f)); ballScores.push_back(3); }
+				else if (r < 45) { ballColors.push_back(vec3(0.2f, 0.85f, 0.2f)); ballScores.push_back(2); }
+				else            { ballColors.push_back(vec3(0.2f, 0.6f, 0.95f)); ballScores.push_back(1); }
 				number++;
 			}
 			else

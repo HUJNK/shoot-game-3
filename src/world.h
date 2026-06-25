@@ -63,6 +63,8 @@ public:
 			obstacles = new ObstacleManager();
 			scorePopups = new ScorePopupManager();
 			wasLeftPressed = false;
+				gameModel = 0;
+				lastDeltaTime = 0.0f;
 			waveNumber = 0;
 			items = new ItemManager();
 			rapidFireTimer = 0.0f;
@@ -168,17 +170,33 @@ public:
 		}
 
 		vector<vec3> hits = ball->GetHitPositions();
-		for (vec3 hitPos : hits) {
-			particles->Explode(hitPos, vec4(0.5f, 0.7f, 0.95f, 1.0f), 250, WATER);
-				// spawn floating score text
-				int mult = (gameModel == 2) ? ball->GetComboMult() : 1;
-				scorePopups->Spawn(hitPos, mult, (gameModel == 2) ? mult : 1);
+		vector<int> hitScores = ball->GetHitScores();
+		for (size_t hi = 0; hi < hits.size(); hi++) {
+			vec3 hitPos = hits[hi];
+			int basePts = (hi < hitScores.size()) ? hitScores[hi] : 1;
+			if (gameModel == 2) {
+				if (basePts >= 5)
+					particles->Explode(hitPos, vec4(1.0f, 0.3f, 0.2f, 1.0f), 350, DEBRIS);
+				else if (basePts >= 3)
+					particles->Explode(hitPos, vec4(1.0f, 0.85f, 0.15f, 1.0f), 280, WATER);
+				else
+					particles->Explode(hitPos, vec4(0.5f, 0.7f, 0.95f, 1.0f), 250, WATER);
+				int mult = ball->GetComboMult();
+				scorePopups->Spawn(hitPos, basePts * mult, mult);
+			} else {
+				vec4 tint = vec4(0.5f, 0.7f, 0.95f, 1.0f);
+				if (basePts >= 5)      tint = vec4(1.0f, 0.3f, 0.2f, 1.0f);
+				else if (basePts >= 3) tint = vec4(1.0f, 0.85f, 0.15f, 1.0f);
+				else if (basePts >= 2) tint = vec4(0.2f, 0.85f, 0.2f, 1.0f);
+				particles->Explode(hitPos, tint, 200, WATER);
+				scorePopups->Spawn(hitPos, basePts, 1);
+			}
 		}
 		particles->Update(deltaTime);
 		scorePopups->Update(deltaTime);
 		hud->Update(deltaTime);
 		// wave detection for mode 2: ballmanager sets flag when balls replenish
-		if (gameModel == 2 && ball->CheckWaveTrigger()) {
+		if (ball->CheckWaveTrigger()) {
 			waveNumber++;
 			hud->ShowWave(waveNumber);
 		}

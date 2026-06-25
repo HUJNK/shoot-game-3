@@ -19,9 +19,20 @@ struct Obstacle {
     vec3 color;
 };
 
+// casual mode: movement state per obstacle
+struct CasualMoveState {
+    vec3 velocity;
+    float boundMin, boundMax;  // bounds for current axis
+    int axis;                  // 0=x, 1=y
+    float switchTimer;         // time until axis/direction switch
+    float switchCooldown;      // cooldown between switches
+};
+
 class ObstacleManager {
 private:
     vector<Obstacle> obstacles;
+    vector<CasualMoveState> casualStates;
+    bool casualInitialized;
     Shader* shader;
     GLuint cubeVAO, cubeVBO;
     int maxObstacles;
@@ -55,6 +66,7 @@ public:
         maxObstacles = 5;
         spawnMin = vec3(-40, 2, -20);
         spawnMax = vec3(40, 25, 40);
+        casualInitialized = false;
 
         glGenVertexArrays(1, &cubeVAO);
         glGenBuffers(1, &cubeVBO);
@@ -66,6 +78,50 @@ public:
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
         glBindVertexArray(0);
+    }
+
+    // === Casual Mode: stationary obstacles in ball area ===
+    void InitCasual() {
+        obstacles.clear();
+        casualStates.clear();
+
+        // Scatter 8 fixed obstacles across the ball spawn area (x:-28~28, y:6~42)
+        float positions[8][2] = {
+            {-20.0f, 10.0f}, { 18.0f, 14.0f}, { -8.0f, 22.0f},
+            { 22.0f, 28.0f}, {-22.0f, 32.0f}, {  5.0f, 36.0f},
+            {-14.0f, 40.0f}, { 15.0f,  8.0f}
+        };
+        vec3 colors[8] = {
+            vec3(0.9f, 0.35f, 0.25f), vec3(0.25f, 0.7f, 0.35f),
+            vec3(0.3f, 0.35f, 0.85f), vec3(0.85f, 0.75f, 0.2f),
+            vec3(0.7f, 0.25f, 0.7f),  vec3(0.2f, 0.8f, 0.7f),
+            vec3(0.9f, 0.55f, 0.1f),  vec3(0.5f, 0.5f, 0.5f)
+        };
+
+        for (int i = 0; i < 8; i++) {
+            Obstacle o;
+            o.position = vec3(positions[i][0], positions[i][1], -30.0f);
+            o.radius = 1.5f;
+            o.health = 9999;
+            o.maxHealth = 9999;
+            o.color = colors[i];
+            obstacles.push_back(o);
+            CasualMoveState s;
+            s.velocity = vec3(0.0f, 0.0f, 0.0f);
+            s.boundMin = 0.0f;
+            s.boundMax = 0.0f;
+            s.axis = 0;
+            s.switchTimer = 0.0f;
+            s.switchCooldown = 0.0f;
+            casualStates.push_back(s);
+        }
+
+        casualInitialized = true;
+    }
+
+    void Update(float deltaTime, bool isCasual) {
+        // casual obstacles are stationary, no update needed
+        (void)deltaTime; (void)isCasual;
     }
 
     void SpawnWave() {

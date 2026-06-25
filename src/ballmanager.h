@@ -258,11 +258,13 @@ public:
 				moveSpeed += 0.1f;
 				maxNumber = 3;
 			}
-			bossWaveCount++;
+			if (gameModel == 2) {
+				bossWaveCount++;
+			}
 			AddBall();
 			waveTriggered = true;
-			// spawn boss every 5 waves
-			if (bossWaveCount % 5 == 0) {
+			// spawn boss every 5 waves (challenge mode only)
+			if (gameModel == 2 && bossWaveCount % 5 == 0) {
 				SpawnBoss();
 			}
 		}

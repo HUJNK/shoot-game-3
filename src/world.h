@@ -158,6 +158,8 @@ public:
 		if (gameModel == 2 && obstacles->IsEmpty()) {
 			obstacles->SpawnWave();
 		}
+			// casual mode: update moving obstacles
+			obstacles->Update(deltaTime, gameModel == 1);
 		place->Update();
 
 		// rapid fire: auto-shoot while timer active
@@ -300,6 +302,9 @@ public:
 		ball->SetGameModel(num);
 		gameModel = num;
 		tutorialActive = false;
+		if (num == 1) {
+			obstacles->InitCasual();
+		}
 	}
 private:
 	void RenderDepth() {

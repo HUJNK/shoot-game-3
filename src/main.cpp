@@ -76,17 +76,21 @@ int main() {
         glfwPollEvents();
     }
     glfwTerminate();
-    cout << "----------------------------您的得分为：" << world.GetScore() << " ----------------------------" << endl;
-	cout << "==================== 结算统计 ====================" << endl;
-	cout << "  最终得分: " << world.GetScore() << endl;
-	cout << "  存活波次: " << world.GetWaveNumber() << endl;
-	cout << "  命中次数: " << world.GetTotalHits() << endl;
-	cout << "  射击次数: " << world.GetTotalShotsFired() << endl;
-	if (world.GetTotalShotsFired() > 0) {
-		cout << "  命中率: " << (int)(world.GetTotalHits() * 100.0f / world.GetTotalShotsFired()) << "%" << endl;
+	if (gameModel == 1) {
+		cout << "---------------------------- 最终得分：" << world.GetScore() << " ----------------------------" << endl;
+	} else {
+			cout << "----------------------------浣犵殑寰楀垎涓猴細" << world.GetScore() << " ----------------------------" << endl;
+			cout << "==================== 结算统计 ====================" << endl;
+			cout << "  最终得分: " << world.GetScore() << endl;
+			cout << "  存活波次: " << world.GetWaveNumber() << endl;
+			cout << "  命中次数: " << world.GetTotalHits() << endl;
+			cout << "  射击次数: " << world.GetTotalShotsFired() << endl;
+			if (world.GetTotalShotsFired() > 0) {
+				cout << "  命中率: " << (int)(world.GetTotalHits() * 100.0f / world.GetTotalShotsFired()) << "%" << endl;
+			}
+			cout << "  最高连击: x" << world.GetMaxCombo() << endl;
+			cout << "==================================================" << endl;
 	}
-	cout << "  最高连击: x" << world.GetMaxCombo() << endl;
-	cout << "==================================================" << endl;
     return 0;
 }
 

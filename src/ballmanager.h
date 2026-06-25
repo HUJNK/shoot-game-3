@@ -29,6 +29,7 @@ private:
 	GLuint score;
 	GLuint lives;
 	GLuint combo;
+	GLuint maxCombo;
 	bool waveTriggered;
 	bool slowMotion;
 	GLuint gameModel;
@@ -64,6 +65,7 @@ public:
 		score = 0;
 		lives = 3;
 		combo = 0;
+		maxCombo = 0;
 		totalHits = 0;
 		waveTriggered = false;
 		slowMotion = false;
@@ -114,6 +116,7 @@ public:
 						else if (combo >= 5) oldMult = 3;
 						else if (combo >= 2) oldMult = 2;
 						combo++;
+						if (combo > maxCombo) maxCombo = combo;
 						int mult = 1;
 						if (combo >= 15) mult = 5;
 						else if (combo >= 9) mult = 4;
@@ -215,6 +218,11 @@ public:
 	vector<int> GetHitScores() {
 		return hitScores;
 	}
+	void SetMovingLightPos(vec3 pos) {
+		ballShader->Bind();
+		ballShader->SetVec3("movingLightPos", pos);
+		ballShader->Unbind();
+	}
 	GLuint GetLives() {
 		return lives;
 	}
@@ -226,6 +234,9 @@ public:
 	}
 	GLuint GetTotalHits() {
 		return totalHits;
+	}
+	GLuint GetMaxCombo() {
+		return maxCombo;
 	}
 	vector<vec3> GetBallPositions() {
 		return position;

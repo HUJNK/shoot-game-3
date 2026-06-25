@@ -11,6 +11,7 @@ uniform vec3 color;
 uniform sampler2D shadowMap;
 
 uniform vec3 lightPos;
+uniform vec3 movingLightPos;
 uniform vec3 viewPos;
 
 float ShadowCalculation(vec4 fragPosLightSpace) {
@@ -56,6 +57,18 @@ void main() {
 
     // compose: ambient always visible, shadow dims diffuse+spec, rim always visible
     vec3 result = ambient + shadowFactor * (diffuse + specular) + rim * rimColor * color;
+
+    // moving light: warm point light always visible (no shadow), illuminates shadow areas
+    vec3 movingLightColor = vec3(1.0, 0.7, 0.4);
+    vec3 movingLightDir = normalize(movingLightPos - Position);
+    float movingDist = length(movingLightPos - Position);
+    float movingAtten = 1.0 / (1.0 + 0.01 * movingDist + 0.0005 * movingDist * movingDist);
+    float movingDiff = max(dot(norm, movingLightDir), 0.0);
+    vec3 movingHalf = normalize(movingLightDir + viewDir);
+    float movingSpec = pow(max(dot(norm, movingHalf), 0.0), 32.0);
+    vec3 movingLight = movingAtten * movingLightColor * (movingDiff * 0.7 + movingSpec * 0.3);
+    result += movingLight * color;
+
     result *= color;
 
     FragColor = vec4(result, 1.0);

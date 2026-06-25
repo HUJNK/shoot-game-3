@@ -36,6 +36,9 @@ private:
 	float rapidFireCooldown;
 	float slowMotionTimer;
 	float gameTime;
+	vec3 movingLightPos;
+	bool tutorialActive;
+	GLuint totalShotsFired;
 
 	GLuint depthMap;
 	GLuint depthMapFBO;
@@ -66,6 +69,8 @@ public:
 				gameModel = 0;
 				lastDeltaTime = 0.0f;
 			waveNumber = 0;
+		tutorialActive = false;
+		totalShotsFired = 0;
 			items = new ItemManager();
 			rapidFireTimer = 0.0f;
 			rapidFireCooldown = 0.0f;
@@ -83,7 +88,22 @@ public:
 	}
 
 	void Update(float deltaTime) {
+		if (tutorialActive) {
+			gameTime += deltaTime;
+			camera->Update(deltaTime);
+			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+				tutorialActive = false;
+				wasLeftPressed = true;
+			}
+			return;
+		}
 		gameTime += deltaTime;
+		// orbiting moving light (warm, circles through shadow areas)
+		movingLightPos = vec3(
+			25.0f * sin(gameTime * 0.7f),
+			8.0f + 6.0f * sin(gameTime * 1.1f),
+			10.0f + 25.0f * cos(gameTime * 0.7f)
+		);
 		camera->Update(deltaTime);
 		bool leftPressed = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 		bool justShot = leftPressed && !wasLeftPressed;
@@ -238,6 +258,7 @@ public:
 			camera->GetViewMatrix(),
 			gameTime
 		);
+		ball->SetMovingLightPos(movingLightPos);
 		ball->Render(NULL, depthMap);
 		particles->Render(
 			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
@@ -259,6 +280,10 @@ public:
 	GLuint GetLives() {
 		return ball->GetLives();
 	}
+	GLuint GetTotalShotsFired() { return totalShotsFired; }
+	GLuint GetTotalHits() { return ball->GetTotalHits(); }
+	GLuint GetMaxCombo() { return ball->GetMaxCombo(); }
+	int GetWaveNumber() { return waveNumber; }
 
 	bool IsOver() {
 		return ball->IsOver();
@@ -267,6 +292,7 @@ public:
 	void SetGameModel(GLuint num) {
 		ball->SetGameModel(num);
 		gameModel = num;
+		tutorialActive = false;
 	}
 private:
 	void RenderDepth() {

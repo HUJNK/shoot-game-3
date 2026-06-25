@@ -92,6 +92,24 @@ private:
     bool letterB[25] = {
         1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0, 1,0,0,0,1, 1,1,1,1,0
     };
+    bool letterG[25] = {
+        0,1,1,1,1, 1,0,0,0,0, 1,0,1,1,1, 1,0,0,0,1, 0,1,1,1,0
+    };
+    bool letterY[25] = {
+        1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0
+    };
+    bool letterT[25] = {
+        1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0
+    };
+    bool letterU[25] = {
+        1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0
+    };
+    bool letterK[25] = {
+        1,0,0,0,1, 1,0,0,1,0, 1,1,1,0,0, 1,0,0,1,0, 1,0,0,0,1
+    };
+    bool letterX[25] = {
+        1,0,0,0,1, 0,1,0,1,0, 0,0,1,0,0, 0,1,0,1,0, 1,0,0,0,1
+    };
 
     void drawDigit(int digit, float startX, float startY, float dotSize, float gap, float r, float g, float b, float a) {
         if (digit < 0 || digit > 9) return;
@@ -138,6 +156,12 @@ private:
         case 'M': pattern = letterM; break;
         case 'C': pattern = letterC; break;
         case 'B': pattern = letterB; break;
+        case 'G': pattern = letterG; break;
+        case 'Y': pattern = letterY; break;
+        case 'T': pattern = letterT; break;
+        case 'U': pattern = letterU; break;
+        case 'K': pattern = letterK; break;
+        case 'X': pattern = letterX; break;
         default: return;
         }
         vector<float> posData;
@@ -209,6 +233,70 @@ public:
             waveTimer -= deltaTime;
             if (waveTimer < 0.0f) waveTimer = 0.0f;
         }
+    }
+
+    void RenderTutorial() {
+        shader->Bind(); glBindVertexArray(VAO); glDisable(GL_DEPTH_TEST);
+        drawQuad(-1.0f, 1.0f, 2.0f, 2.0f, 0.0f, 0.0f, 0.0f, 0.75f);
+        float bs = 0.12f, gap = 0.08f, a = 1.0f, totalW = 4*bs + 3*gap;
+        float sx = -totalW/2.0f, sy = 0.25f, nDot = 0.04f, nGap = 0.01f;
+        drawQuad(sx, sy, bs, bs, 0.2f, 0.75f, 0.2f, a);
+        drawDigit(1, sx+bs/2-0.03f, sy-0.18f, nDot, nGap, 0.3f,0.9f,0.3f,a);
+        drawLetter('P', sx+bs/2+0.02f, sy-0.18f, nDot*0.7f, nGap*0.7f, 0.3f,0.9f,0.3f,a);
+        sx += bs + gap;
+        drawQuad(sx, sy, bs, bs, 0.85f, 0.85f, 0.1f, a);
+        drawDigit(2, sx+bs/2-0.03f, sy-0.18f, nDot, nGap, 1,1,0.2f,a);
+        drawLetter('P', sx+bs/2+0.02f, sy-0.18f, nDot*0.7f, nGap*0.7f, 1,1,0.2f,a);
+        sx += bs + gap;
+        drawQuad(sx, sy, bs, bs, 0.9f, 0.2f, 0.1f, a);
+        drawDigit(3, sx+bs/2-0.03f, sy-0.18f, nDot, nGap, 1,0.3f,0.2f,a);
+        drawLetter('P', sx+bs/2+0.02f, sy-0.18f, nDot*0.7f, nGap*0.7f, 1,0.3f,0.2f,a);
+        sx += bs + gap;
+        drawQuad(sx, sy, bs, bs, 0.7f, 0.2f, 0.95f, a);
+        drawDigit(5, sx+bs/2-0.03f, sy-0.18f, nDot, nGap, 0.8f,0.3f,1,a);
+        drawLetter('P', sx+bs/2+0.02f, sy-0.18f, nDot*0.7f, nGap*0.7f, 0.8f,0.3f,1,a);
+        float sDot = 0.02f, sGap = 0.005f, ly = -0.15f;
+        sx = -totalW/2.0f;
+        drawLetter('S', sx+bs*0.1f, ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('L', sx+bs*0.1f+5*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('O', sx+bs*0.1f+10*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('W', sx+bs*0.1f+15*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        sx += bs + gap; sx += bs + gap;
+        drawLetter('F', sx+bs*0.15f, ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('A', sx+bs*0.15f+5*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('S', sx+bs*0.15f+10*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('T', sx+bs*0.15f+15*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        sx += bs + gap;
+        drawLetter('F', sx+bs*0.1f, ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('A', sx+bs*0.1f+5*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('S', sx+bs*0.1f+10*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        drawLetter('T', sx+bs*0.1f+15*(sDot+sGap), ly, sDot, sGap, 0.5f,0.5f,0.5f,a);
+        ly = -0.35f; sx = -0.15f;
+        drawLetter('C', sx, ly, sDot, sGap, 1,0.8f,0,a); sx+=5*(sDot+sGap);
+        drawLetter('O', sx, ly, sDot, sGap, 1,0.8f,0,a); sx+=5*(sDot+sGap);
+        drawLetter('M', sx, ly, sDot, sGap, 1,0.8f,0,a); sx+=5*(sDot+sGap);
+        drawLetter('B', sx, ly, sDot, sGap, 1,0.8f,0,a); sx+=5*(sDot+sGap);
+        drawLetter('O', sx, ly, sDot, sGap, 1,0.8f,0,a); sx+=5*(sDot+sGap)+sGap*3;
+        drawLetter('X', sx, ly, sDot, sGap, 1,0.8f,0,a); sx+=5*(sDot+sGap)+sGap*2;
+        drawDigit(1, sx, ly, sDot*1.5f, sGap, 1,0.8f,0,a); sx+=3*(sDot*1.5f+sGap)+sGap;
+        sx+=2*(sDot+sGap)+sGap;
+        drawLetter('X', sx, ly, sDot, sGap, 1,0.8f,0,a); sx+=5*(sDot+sGap)+sGap*2;
+        drawDigit(5, sx, ly, sDot*1.5f, sGap, 1,0.8f,0,a);
+        float bDot = 0.025f, bGap = 0.006f;
+        ly = -0.6f; sx = -0.28f;
+        drawLetter('C', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('L', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('I', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('C', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('K', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap)+bGap*2;
+        drawLetter('T', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('O', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap)+bGap*2;
+        drawLetter('S', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('T', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('A', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('R', sx, ly, bDot, bGap, 1,1,1,a); sx+=5*(bDot+bGap);
+        drawLetter('T', sx, ly, bDot, bGap, 1,1,1,a);
+        glEnable(GL_DEPTH_TEST); glBindVertexArray(0); shader->Unbind();
     }
 
     void Render(int lives, int score, int comboMult, int hitsCount, bool isCasualMode, float rapidTimer = 0.0f, float slowTimer = 0.0f) {
@@ -308,9 +396,9 @@ public:
             }
 
             if (comboMult > 1) {
-                float cx = digitStartX + numDigits * (dotSize * 3 + gap * 2 + 0.02f) + 0.03f;
-                drawQuad(cx, digitStartY, dotSize * 2, dotSize * 5, 1.0f, 0.8f, 0.0f, 1.0f);
-                drawDigit(comboMult, cx + 0.03f, digitStartY, dotSize, gap, 1.0f, 0.8f, 0.0f, 1.0f);
+                float cx = digitStartX + numDigits * (dotSize * 3 + gap * 2 + 0.02f) + 0.07f;
+                drawQuad(cx, digitStartY, dotSize * 1.0f, dotSize * 5, 1.0f, 0.8f, 0.0f, 1.0f);
+                drawDigit(comboMult, cx + 0.025f, digitStartY, dotSize, gap, 1.0f, 0.8f, 0.0f, 1.0f);
             }
         }
 
@@ -331,42 +419,34 @@ public:
             drawLetter('W', fxX, fxY, fxDot, fxGap, 0.3f, 0.6f, 1.0f, a);
         }
 
-	        // === WAVE NOTIFICATION: centered fading number ===
-	        if (waveTimer > 0.0f) {
-	            float alpha = waveTimer / WAVE_DURATION;
-	            float fadeAlpha;
-	            if (alpha > 0.7f) {
-	                fadeAlpha = (1.0f - alpha) / 0.3f;
-	            } else {
-	                fadeAlpha = alpha / 0.7f;
-	            }
-	            float r = 1.0f, g = 0.75f, bCol = 0.1f;
-
-	            // Large centered wave number
-	            float wDotSize = 0.04f, wGap = 0.008f;
-	            int wn = waveNum;
-	            int wDigits[10];
-	            int wNumDigits = 0;
-	            if (wn == 0) { wDigits[0] = 0; wNumDigits = 1; }
-	            else { while (wn > 0 && wNumDigits < 10) { wDigits[wNumDigits++] = wn % 10; wn /= 10; } }
-	            float wTotalW = wNumDigits * (wDotSize * 3.0f + wGap * 2.0f) - wGap;
-	            float wStartX = -wTotalW / 2.0f;
-	            float wY = 0.20f;
-	            float wx = wStartX;
-	            for (int i = wNumDigits - 1; i >= 0; i--) {
-	                drawDigit(wDigits[i], wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha);
-	                wx += wDotSize * 3.0f + wGap;
-	            }
-
-	            // Decorative lines above and below
-	            float lineW = wTotalW + 0.12f;
-	            float lineH = 0.006f;
-	            float lineX = -lineW / 2.0f;
-	            drawQuad(lineX, wY + 0.05f, lineW, lineH, r, g, bCol, fadeAlpha);
-	            drawQuad(lineX, wY - (5.0f * wDotSize + 4.0f * wGap) - 0.05f, lineW, lineH, r, g, bCol, fadeAlpha);
-	        }
-
-        glEnable(GL_DEPTH_TEST);
+	        // === WAVE NOTIFICATION: centered fading "WAVE N" ===
+		        if (waveTimer > 0.0f) {
+		            float alpha = waveTimer / WAVE_DURATION;
+		            float fadeAlpha;
+		            if (alpha > 0.7f) fadeAlpha = (1.0f - alpha) / 0.3f;
+		            else fadeAlpha = alpha / 0.7f;
+		            float r = 1.0f, g = 0.75f, bCol = 0.1f;
+		            float wDotSize = 0.035f, wGap = 0.008f;
+		            float lw5 = 5.0f * (wDotSize + wGap);
+		            int wn = waveNum, wDigits[10], wNumDigits = 0;
+		            if (wn == 0) { wDigits[0] = 0; wNumDigits = 1; }
+		            else { while (wn > 0 && wNumDigits < 10) { wDigits[wNumDigits++] = wn % 10; wn /= 10; } }
+		            float numWidth = wNumDigits * (wDotSize * 3.0f + wGap);
+		            float totalW = lw5 * 4.0f + wGap * 4.0f + numWidth;
+		            float startX = -totalW / 2.0f, wY = 0.22f, wx = startX;
+		            drawLetter('W', wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha); wx += lw5 + wGap;
+		            drawLetter('A', wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha); wx += lw5 + wGap;
+		            drawLetter('V', wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha); wx += lw5 + wGap;
+		            drawLetter('E', wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha); wx += lw5 + wGap;
+		            for (int i = wNumDigits - 1; i >= 0; i--) {
+		                drawDigit(wDigits[i], wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha);
+		                wx += wDotSize * 3.0f + wGap;
+		            }
+		            float lineW = totalW + 0.12f, lineH = 0.006f, lineX = -lineW / 2.0f;
+		            drawQuad(lineX, wY + 0.06f, lineW, lineH, r, g, bCol, fadeAlpha);
+		            drawQuad(lineX, wY - 5.0f * wDotSize - 0.06f, lineW, lineH, r, g, bCol, fadeAlpha);
+		        }
+glEnable(GL_DEPTH_TEST);
         glBindVertexArray(0);
         shader->Unbind();
     }

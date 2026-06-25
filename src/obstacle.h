@@ -33,6 +33,8 @@ private:
     vector<Obstacle> obstacles;
     vector<CasualMoveState> casualStates;
     bool casualInitialized;
+    vector<vec3> heartVoxels;    // decorative heart cubes
+    float heartCubeSize;
     Shader* shader;
     GLuint cubeVAO, cubeVBO;
     int maxObstacles;
@@ -116,6 +118,34 @@ public:
             casualStates.push_back(s);
         }
 
+        // === Generate decorative heart above ball area ===
+        heartVoxels.clear();
+        heartCubeSize = 0.9f;
+        float heartScale = 12.0f;       // total heart size
+        float heartZ = -30.0f;          // same z-plane as balls
+        float heartY = 35.0f;           // mid-height in ball area
+        float heartX = -42.0f;          // left-front of player
+        float thickness = 2.0f;         // z-depth of the heart
+        float step = 1.0f;              // voxel resolution (bigger = fewer cubes)
+
+        for (float y = -1.5f; y <= 1.5f; y += step / heartScale) {
+            for (float x = -1.5f; x <= 1.5f; x += step / heartScale) {
+                // 2D heart equation: (x² + y² - 1)³ - x²·y³ ≤ 0
+                float x2 = x * x, y2 = y * y, y3 = y2 * y;
+                float val = (x2 + y2 - 1.0f);
+                float heart = val * val * val - x2 * y3;
+                if (heart <= 0.0f) {
+                    for (float z = -thickness / 2.0f; z <= thickness / 2.0f; z += heartCubeSize) {
+                        heartVoxels.push_back(vec3(
+                            heartX + x * heartScale,
+                            heartY + y * heartScale,
+                            heartZ + z
+                        ));
+                    }
+                }
+            }
+        }
+
         casualInitialized = true;
     }
 
@@ -182,6 +212,24 @@ public:
 
             glBindVertexArray(cubeVAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
+            shader->Unbind();
+        }
+
+        // === Render decorative heart (red cubes) ===
+        if (!heartVoxels.empty()) {
+            shader->Bind();
+            shader->SetMat4("projection", projection);
+            shader->SetMat4("view", view);
+            glBindVertexArray(cubeVAO);
+            for (size_t i = 0; i < heartVoxels.size(); i++) {
+                mat4 model = mat4(1.0);
+                model[3] = vec4(heartVoxels[i], 1.0);
+                model = scale(model, vec3(heartCubeSize));
+                shader->SetMat4("model", model);
+                shader->SetVec3("objColor", vec3(1.0f, 0.1f, 0.15f));
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+            }
             glBindVertexArray(0);
             shader->Unbind();
         }

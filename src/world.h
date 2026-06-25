@@ -229,17 +229,10 @@ public:
 			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
 			camera->GetViewMatrix()
 		);
-<<<<<<< HEAD
-		// HUD: mode 1 shows casual (hits+score+combo), mode 2 shows challenge (lives+score+combo)
+		// HUD: mode 1 shows casual, mode 2 shows challenge + effect timers
 		hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult(),
-			        (int)ball->GetTotalHits(), gameModel == 1);
-=======
-		// HUD for challenge mode only
-		if (gameModel == 2) {
-			hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult(), (int)ball->GetTotalHits(), gameModel == 1, rapidFireTimer, slowMotionTimer);
+			        (int)ball->GetTotalHits(), gameModel == 1, rapidFireTimer, slowMotionTimer);
 		}
->>>>>>> 01b1d0c (道具系统 Power-up System (仅模式二))
-	}
 
 	GLuint GetScore() {
 		return ball->GetScore();

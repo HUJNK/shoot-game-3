@@ -299,7 +299,7 @@ public:
         glEnable(GL_DEPTH_TEST); glBindVertexArray(0); shader->Unbind();
     }
 
-    void Render(int lives, int score, int comboMult, int hitsCount, bool isCasualMode, float rapidTimer = 0.0f, float slowTimer = 0.0f) {
+    void Render(int lives, int score, int comboMult, int hitsCount, bool isCasualMode, float rapidTimer = 0.0f, float slowTimer = 0.0f, bool bossActive = false, int bossHP = 0, int bossMaxHP = 0) {
         shader->Bind();
         glBindVertexArray(VAO);
         glDisable(GL_DEPTH_TEST);
@@ -418,6 +418,41 @@ public:
             drawLetter('O', fxX, fxY, fxDot, fxGap, 0.3f, 0.6f, 1.0f, a); fxX += 5*(fxDot+fxGap)+fxGap;
             drawLetter('W', fxX, fxY, fxDot, fxGap, 0.3f, 0.6f, 1.0f, a);
         }
+
+		// === BOSS HEALTH BAR (top center, only when boss active) ===
+		if (!isCasualMode && bossActive && bossMaxHP > 0) {
+			float barWidth = 0.45f, barHeight = 0.03f;
+			float barX = -barWidth / 2.0f, barY = 0.88f;
+			// background
+			drawQuad(barX, barY, barWidth, barHeight, 0.15f, 0.15f, 0.15f, 0.85f);
+			// health fill
+			float hpRatio = (float)bossHP / (float)bossMaxHP;
+			if (hpRatio < 0.0f) hpRatio = 0.0f;
+			if (hpRatio > 1.0f) hpRatio = 1.0f;
+			float r = hpRatio > 0.3f ? 1.0f : 1.0f;
+			float g = hpRatio > 0.3f ? 0.15f + (1.0f - hpRatio) * 0.3f : 0.55f;
+			float b = 0.05f;
+			drawQuad(barX, barY, barWidth * hpRatio, barHeight, r, g, b, 1.0f);
+			// BOSS label above bar
+			float lSize = 0.014f, lGap = 0.002f;
+			float lw5 = 5.0f * (lSize + lGap);
+			float labelW = lw5 * 4.0f;
+			float lx = -labelW / 2.0f, ly = barY + 0.04f;
+			drawLetter('B', lx, ly, lSize, lGap, 1.0f, 0.2f, 0.05f, 1.0f); lx += lw5;
+			drawLetter('O', lx, ly, lSize, lGap, 1.0f, 0.2f, 0.05f, 1.0f); lx += lw5;
+			drawLetter('S', lx, ly, lSize, lGap, 1.0f, 0.2f, 0.05f, 1.0f); lx += lw5;
+			drawLetter('S', lx, ly, lSize, lGap, 1.0f, 0.2f, 0.05f, 1.0f);
+			// HP text next to bar
+			float dSize = 0.013f, dGap = 0.002f;
+			int hp = bossHP, hpDigits[10], hpNum = 0;
+			if (hp == 0) { hpDigits[0] = 0; hpNum = 1; }
+			else { while (hp > 0 && hpNum < 10) { hpDigits[hpNum++] = hp % 10; hp /= 10; } }
+			float dpx = barX + barWidth + 0.04f;
+			for (int i = hpNum - 1; i >= 0; i--) {
+				drawDigit(hpDigits[i], dpx, barY, dSize, dGap, 1.0f, 0.15f, 0.05f, 1.0f);
+				dpx += dSize * 3.2f;
+			}
+		}
 
 	        // === WAVE NOTIFICATION: centered fading "WAVE N" ===
 		        if (waveTimer > 0.0f) {

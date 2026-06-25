@@ -33,6 +33,13 @@ private:
 	bool waveTriggered;
 	bool slowMotion;
 	GLuint gameModel;
+	// Boss ball
+	vec3 bossPosition;
+	bool bossActive;
+	int bossHP, bossMaxHP;
+	float bossPhase;
+	int bossWaveCount;
+	float bossOriginalX, bossOriginalY;
 	GLuint totalHits;
 	vec3 lightPos;
 	mat4 lightSpaceMatrix;
@@ -69,6 +76,11 @@ public:
 		totalHits = 0;
 		waveTriggered = false;
 		slowMotion = false;
+		bossActive = false;
+		bossHP = 0;
+		bossMaxHP = 0;
+		bossPhase = 0.0f;
+		bossWaveCount = 0;
 		this->lightPos = vec3(0.0, 400.0, 150.0);
 		mat4 lightProjection = ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 500.0f);
 		mat4 lightView = lookAt(lightPos, vec3(0.0f), vec3(0.0, 1.0, 0.0));
@@ -91,14 +103,68 @@ public:
 		gameModel = num;
 	}
 
-	void Update(vec3 pos, vec3 dir, bool isShoot) {
+	void Update(vec3 pos, vec3 dir, bool isShoot, float deltaTime) {
 		this->view = camera->GetViewMatrix();
 		hitPositions.clear();
 		hitScores.clear();
 		bool hitThisFrame = false;
 		this->projection = perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f);
 
+		// === Boss movement (challenge mode) ===
+		if (bossActive && gameModel == 2) {
+			bossPhase += deltaTime;
+			bossPosition.x = bossOriginalX + sin(bossPhase * 2.0f) * 15.0f;
+			bossPosition.y = bossOriginalY + cos(bossPhase * 1.5f) * 4.0f;
+			float effBossSpeed = slowMotion ? moveSpeed * 0.4f * 0.6f : moveSpeed * 0.6f;
+			bossPosition.z += effBossSpeed;
+			if (bossPosition.z >= 70) {
+				bossActive = false;
+				lives--;
+				combo = 0;
+				cout << "Boss escaped! Life lost." << endl;
+			}
+		}
+
 		if (isShoot) {
+			// === Boss hit check (challenge mode, before regular balls) ===
+			bool bossWasHit = false;
+			if (bossActive && gameModel == 2) {
+				vec3 oc = pos - bossPosition;
+				float bVal = dot(oc, dir);
+				float cVal = dot(oc, oc) - 25.0f;
+				float disc = bVal * bVal - cVal;
+				if (disc > 0.0f) {
+					float t = -bVal - sqrt(disc);
+					if (t > 0.0f && t < 120.0f) {
+						bossWasHit = true;
+						bossHP--;
+						hitPositions.push_back(bossPosition);
+						combo++;
+						if (combo > 5) combo = 5;
+						if (combo > maxCombo) maxCombo = combo;
+						int mult = combo;
+						if (combo >= 5) mult = 5;
+						else if (combo >= 4) mult = 4;
+						else if (combo >= 3) mult = 3;
+						else if (combo >= 2) mult = 2;
+						if (bossHP <= 0) {
+							bossActive = false;
+							score += 25 * mult;
+							hitScores.push_back(25);
+							totalHits++;
+							cout << "BOSS DEFEATED! +25 x" << mult << endl;
+						} else {
+							score += 5 * mult;
+							hitScores.push_back(5);
+							totalHits++;
+							cout << "Boss hit! HP: " << bossHP << "/" << bossMaxHP << endl;
+						}
+						hitThisFrame = true;
+					}
+				}
+			}
+			// === Regular ball hit check ===
+			if (!bossWasHit) {
 			vector<vec3> temp;
 			for (GLuint i = 0; i < position.size(); i++) {
 				vec3 des = (pos.z - position[i].z) / (-dir.z) * dir + pos;
@@ -111,16 +177,17 @@ public:
 					hitThisFrame = true;
 					if (gameModel == 2) {
 						int oldMult = 1;
-						if (combo >= 15) oldMult = 5;
-						else if (combo >= 9) oldMult = 4;
-						else if (combo >= 5) oldMult = 3;
+						if (combo >= 5) oldMult = 5;
+						else if (combo >= 4) oldMult = 4;
+						else if (combo >= 3) oldMult = 3;
 						else if (combo >= 2) oldMult = 2;
 						combo++;
+						if (combo > 5) combo = 5;
 						if (combo > maxCombo) maxCombo = combo;
-						int mult = 1;
-						if (combo >= 15) mult = 5;
-						else if (combo >= 9) mult = 4;
-						else if (combo >= 5) mult = 3;
+						int mult = combo;
+						if (combo >= 5) mult = 5;
+						else if (combo >= 4) mult = 4;
+						else if (combo >= 3) mult = 3;
 						else if (combo >= 2) mult = 2;
 						int basePt = ballScores[i];
 						hitScores.push_back(basePt);
@@ -134,10 +201,12 @@ public:
 						score += basePt;
 						totalHits++;
 						combo++;
+						if (combo > 5) combo = 5;
 					}
 				}
 			}
 			position = temp;
+			} // end if (!bossWasHit)
 			if (!hitThisFrame) combo = 0;
 		}
 
@@ -189,8 +258,13 @@ public:
 				moveSpeed += 0.1f;
 				maxNumber = 3;
 			}
+			bossWaveCount++;
 			AddBall();
 			waveTriggered = true;
+			// spawn boss every 5 waves
+			if (bossWaveCount % 5 == 0) {
+				SpawnBoss();
+			}
 		}
 	}
 
@@ -248,6 +322,9 @@ public:
 		}
 		return false;
 	}
+	bool IsBossActive() { return bossActive; }
+	int GetBossHP() { return bossHP; }
+	int GetBossMaxHP() { return bossMaxHP; }
 
 	void Render(Shader* shader, GLuint depthMap = -1) {
 		for (GLuint i = 0; i < position.size(); i++) {
@@ -270,6 +347,26 @@ public:
 			glBindVertexArray(ball->GetVAO());
 			glDrawElements(GL_TRIANGLES, static_cast<GLuint>(ball->GetIndices().size()), GL_UNSIGNED_INT, 0);
 			shader->Unbind();
+			glBindVertexArray(0);
+			model = mat4(1.0);
+		}
+
+		// === Boss rendering (challenge mode) ===
+		if (bossActive && gameModel == 2) {
+			model = mat4(1.0);
+			model[3] = vec4(bossPosition, 1.0);
+			float pulseScale = 8.0f + sin(bossPhase * 3.0f) * 0.8f;
+			model = scale(model, vec3(pulseScale));
+			ballShader->Bind();
+			ballShader->SetMat4("projection", projection);
+			ballShader->SetMat4("view", view);
+			ballShader->SetVec3("color", vec3(1.0f, 0.12f, 0.05f));
+			ballShader->SetMat4("model", model);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, depthMap);
+			glBindVertexArray(ball->GetVAO());
+			glDrawElements(GL_TRIANGLES, static_cast<GLuint>(ball->GetIndices().size()), GL_UNSIGNED_INT, 0);
+			ballShader->Unbind();
 			glBindVertexArray(0);
 			model = mat4(1.0);
 		}
@@ -304,6 +401,17 @@ private:
 		ballShader->SetVec3("viewPos", camera->GetPosition());
 		ballShader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 		ballShader->Unbind();
+	}
+
+	void SpawnBoss() {
+		bossActive = true;
+		bossMaxHP = 3 + bossWaveCount / 10;
+		bossHP = bossMaxHP;
+		bossOriginalX = (rand() % 2) ? (float)(rand() % 20) : -(float)(rand() % 20);
+		bossOriginalY = 8.0f + (float)(rand() % 15);
+		bossPosition = vec3(bossOriginalX, bossOriginalY, basicPos.z - 15.0f);
+		bossPhase = 0.0f;
+		cout << "=== BOSS WAVE " << bossWaveCount << "! HP: " << bossMaxHP << " ===" << endl;
 	}
 
 	void AddBall() {

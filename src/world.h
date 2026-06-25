@@ -115,19 +115,19 @@ public:
 				if (obsHit.x > -900) {
 					// hit obstacle: explode, block shot
 					particles->Explode(obsHit, vec4(0.8f, 0.3f, 0.1f, 1.0f), 120, DEBRIS);
-					ball->Update(camera->GetPosition(), camera->GetFront(), false);
+					ball->Update(camera->GetPosition(), camera->GetFront(), false, deltaTime);
 				} else {
 					// muzzle flash for mode 2
 					if (gameModel == 2) {
 						vec3 muzzlePos = camera->GetPosition() + camera->GetFront() * 2.0f;
 						particles->Explode(muzzlePos, vec4(1.0f, 0.9f, 0.3f, 1.0f), 30, MUZZLE);
 					}
-					ball->Update(camera->GetPosition(), camera->GetFront(), true);
+					ball->Update(camera->GetPosition(), camera->GetFront(), true, deltaTime);
 				}
 			player->Update(deltaTime, true);
 		}
 		else {
-			ball->Update(camera->GetPosition(), camera->GetFront(), false);
+			ball->Update(camera->GetPosition(), camera->GetFront(), false, deltaTime);
 			player->Update(deltaTime, false);
 		}
 		// item hit check for mode 2 (every frame)
@@ -168,9 +168,9 @@ public:
 				vec3 obsHit = obstacles->CheckHit(camera->GetPosition(), camera->GetFront());
 				if (obsHit.x > -900) {
 					particles->Explode(obsHit, vec4(0.8f, 0.3f, 0.1f, 1.0f), 120, DEBRIS);
-					ball->Update(camera->GetPosition(), camera->GetFront(), false);
+					ball->Update(camera->GetPosition(), camera->GetFront(), false, deltaTime);
 				} else {
-					ball->Update(camera->GetPosition(), camera->GetFront(), true);
+					ball->Update(camera->GetPosition(), camera->GetFront(), true, deltaTime);
 				}
 				player->Update(deltaTime, true);
 			}
@@ -195,7 +195,13 @@ public:
 			vec3 hitPos = hits[hi];
 			int basePts = (hi < hitScores.size()) ? hitScores[hi] : 1;
 			if (gameModel == 2) {
-				if (basePts >= 5)
+				if (basePts >= 25) {
+					// Boss kill - MASSIVE multi-layer explosion
+					particles->Explode(hitPos, vec4(1.0f, 0.15f, 0.05f, 1.0f), 500, DEBRIS);
+					particles->Explode(hitPos, vec4(1.0f, 0.7f, 0.1f, 1.0f), 350, WATER);
+					particles->Explode(hitPos, vec4(1.0f, 1.0f, 1.0f, 1.0f), 200, MUZZLE);
+					particles->Explode(hitPos, vec4(0.5f, 0.2f, 1.0f, 1.0f), 150, WATER);
+				} else if (basePts >= 5)
 					particles->Explode(hitPos, vec4(1.0f, 0.3f, 0.2f, 1.0f), 350, DEBRIS);
 				else if (basePts >= 3)
 					particles->Explode(hitPos, vec4(1.0f, 0.85f, 0.15f, 1.0f), 280, WATER);
@@ -270,7 +276,8 @@ public:
 		);
 		// HUD: mode 1 shows casual, mode 2 shows challenge + effect timers
 		hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult(),
-			        (int)ball->GetTotalHits(), gameModel == 1, rapidFireTimer, slowMotionTimer);
+			        (int)ball->GetTotalHits(), gameModel == 1, rapidFireTimer, slowMotionTimer,
+			        ball->IsBossActive(), ball->GetBossHP(), ball->GetBossMaxHP());
 		}
 
 	GLuint GetScore() {

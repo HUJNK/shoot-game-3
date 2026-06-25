@@ -155,10 +155,9 @@ public:
 			perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f),
 			camera->GetViewMatrix()
 		);
-		// HUD for challenge mode only
-		if (gameModel == 2) {
-			hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult());
-		}
+		// HUD: mode 1 shows casual (hits+score+combo), mode 2 shows challenge (lives+score+combo)
+		hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult(),
+			        (int)ball->GetTotalHits(), gameModel == 1);
 	}
 
 	GLuint GetScore() {

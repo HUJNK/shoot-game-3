@@ -28,13 +28,35 @@ struct CasualMoveState {
     float switchCooldown;      // cooldown between switches
 };
 
+// casual mode: floating decorative cube that disappears and respawns
+struct FloatingCube {
+    vec3 position;
+    vec3 velocity;
+    float lifetime;       // remaining life in seconds
+    float maxLifetime;    // total life for fade-out calc
+    float bobPhase;
+    vec3 color;
+    float size;
+};
+
 class ObstacleManager {
 private:
     vector<Obstacle> obstacles;
     vector<CasualMoveState> casualStates;
     bool casualInitialized;
-    vector<vec3> heartVoxels;    // decorative heart cubes
+    vector<FloatingCube> floatingCubes;  // dynamic floating cubes (casual mode)
+    float floatingCubeBaseSize;
+    int maxFloatingCubes;
+    float floatingSpawnTimer;
+    vector<vec3> heartVoxels;    // decorative heart cubes (canonical, centered at origin)
     float heartCubeSize;
+    vector<vec3> smallHeartPositions;  // centers of small hearts on left side
+    float heartZAngle;                // Z-axis rotation for hearts
+    // arrows
+    GLuint arrowVAO, arrowVBO;
+    vector<vec3> arrowPositions;      // glowing upward arrows below spikes
+    float arrowGlowPhase;
+    float arrowSpinAngle;
     Shader* shader;
     GLuint cubeVAO, cubeVBO;
     int maxObstacles;
@@ -69,12 +91,43 @@ public:
         spawnMin = vec3(-40, 2, -20);
         spawnMax = vec3(40, 25, 40);
         casualInitialized = false;
+        maxFloatingCubes = 60;
+        floatingCubeBaseSize = 0.7f;
+        floatingSpawnTimer = 0.0f;
+        heartZAngle = 0.0f;
+        arrowGlowPhase = 0.0f;
+        arrowSpinAngle = 0.0f;
 
         glGenVertexArrays(1, &cubeVAO);
         glGenBuffers(1, &cubeVBO);
         glBindVertexArray(cubeVAO);
         glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVerts), cubeVerts, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
+        glBindVertexArray(0);
+
+        // Arrow geometry: upward-pointing arrow (flat, facing +Z)
+        float arrowVerts[54] = {
+            // arrow head triangle (top)
+            0.0f, 0.5f, 0.0f,  0,0,1,
+            -0.35f, -0.1f, 0.0f,  0,0,1,
+             0.35f, -0.1f, 0.0f,  0,0,1,
+            // arrow body (rectangle below)
+            -0.1f, -0.1f, 0.0f,  0,0,1,
+             0.1f, -0.1f, 0.0f,  0,0,1,
+             0.1f, -0.5f, 0.0f,  0,0,1,
+            -0.1f, -0.1f, 0.0f,  0,0,1,
+             0.1f, -0.5f, 0.0f,  0,0,1,
+            -0.1f, -0.5f, 0.0f,  0,0,1,
+        };
+        glGenVertexArrays(1, &arrowVAO);
+        glGenBuffers(1, &arrowVBO);
+        glBindVertexArray(arrowVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, arrowVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(arrowVerts), arrowVerts, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)0);
         glEnableVertexAttribArray(1);
@@ -118,40 +171,97 @@ public:
             casualStates.push_back(s);
         }
 
-        // === Generate decorative heart above ball area ===
+        // === Generate floating decorative cubes in balloon area ===
+        floatingCubes.clear();
+        // Spawn initial batch of floating cubes scattered across the balloon area
+        for (int i = 0; i < maxFloatingCubes; i++) {
+            SpawnFloatingCube();
+        }
+        floatingSpawnTimer = 0.0f;
+
+        // === Generate canonical heart voxels (centered at origin, scale=1.0) ===
         heartVoxels.clear();
-        heartCubeSize = 0.9f;
-        float heartScale = 12.0f;       // total heart size
-        float heartZ = -30.0f;          // same z-plane as balls
-        float heartY = 35.0f;           // mid-height in ball area
-        float heartX = -42.0f;          // left-front of player
-        float thickness = 2.0f;         // z-depth of the heart
-        float step = 1.0f;              // voxel resolution (bigger = fewer cubes)
+        heartCubeSize = 1.0f;
+        float heartScale = 1.0f;
+        float thickness = 2.0f;
+        float step = 0.08f;  // high resolution for clear heart shape
 
         for (float y = -1.5f; y <= 1.5f; y += step / heartScale) {
             for (float x = -1.5f; x <= 1.5f; x += step / heartScale) {
-                // 2D heart equation: (x² + y² - 1)³ - x²·y³ ≤ 0
                 float x2 = x * x, y2 = y * y, y3 = y2 * y;
                 float val = (x2 + y2 - 1.0f);
                 float heart = val * val * val - x2 * y3;
                 if (heart <= 0.0f) {
                     for (float z = -thickness / 2.0f; z <= thickness / 2.0f; z += heartCubeSize) {
-                        heartVoxels.push_back(vec3(
-                            heartX + x * heartScale,
-                            heartY + y * heartScale,
-                            heartZ + z
-                        ));
+                        heartVoxels.push_back(vec3(x * heartScale, y * heartScale, z));
                     }
                 }
             }
         }
 
+        // === Single small heart on left side ===
+        float hz = -30.0f;
+        smallHeartPositions.clear();
+        smallHeartPositions.push_back(vec3(-38.0f, 24.0f, hz));
+        heartZAngle = 0.0f;
+
+        // === Arrow positions in empty space below spike row ===
+        arrowPositions.clear();
+        float arrowZ = -30.0f;
+        for (int ax = -24; ax <= 24; ax += 12) {
+            arrowPositions.push_back(vec3((float)ax, 3.0f, arrowZ));
+            arrowPositions.push_back(vec3((float)ax + 4.0f, 8.0f, arrowZ));
+        }
+        for (int ax = -20; ax <= 20; ax += 16) {
+            arrowPositions.push_back(vec3((float)ax, 5.0f, arrowZ + 2.0f));
+        }
+        arrowGlowPhase = 0.0f;
+        arrowSpinAngle = 0.0f;
+
         casualInitialized = true;
     }
 
     void Update(float deltaTime, bool isCasual) {
-        // casual obstacles are stationary, no update needed
-        (void)deltaTime; (void)isCasual;
+        // === Floating cubes: disappear over time + respawn ===
+        if (isCasual && casualInitialized) {
+            for (int i = (int)floatingCubes.size() - 1; i >= 0; i--) {
+                FloatingCube& fc = floatingCubes[i];
+                fc.lifetime -= deltaTime;
+                fc.bobPhase += deltaTime * (1.5f + fc.size * 2.0f);
+
+                // gentle floating motion
+                fc.position += fc.velocity * deltaTime;
+                fc.position.y += sin(fc.bobPhase) * 0.3f * deltaTime;
+
+                // wrap around if drifts too far in x
+                if (fc.position.x > 35.0f)  fc.position.x = -35.0f;
+                if (fc.position.x < -35.0f) fc.position.x = 35.0f;
+                // wrap y
+                if (fc.position.y > 50.0f)  fc.position.y = 3.0f;
+                if (fc.position.y < 3.0f)   fc.position.y = 50.0f;
+
+                // remove if lifetime expired
+                if (fc.lifetime <= 0.0f) {
+                    floatingCubes.erase(floatingCubes.begin() + i);
+                }
+            }
+
+            // respawn to maintain count
+            floatingSpawnTimer -= deltaTime;
+            if (floatingSpawnTimer <= 0.0f && (int)floatingCubes.size() < maxFloatingCubes) {
+                SpawnFloatingCube();
+                floatingSpawnTimer = 0.3f + (rand() % 100) / 200.0f;  // spawn every 0.3-0.8s
+            }
+
+            // heart Z-axis rotation
+            heartZAngle += deltaTime * 0.6f;  // gentle spin
+            // arrow glow pulse + Z-axis spin
+            arrowGlowPhase += deltaTime * 3.0f;
+            arrowSpinAngle += deltaTime * 2.5f;  // fast Z spin
+        }
+
+        // challenge mode obstacles are stationary, no update needed
+        (void)isCasual;
     }
 
     void SpawnWave() {
@@ -216,15 +326,48 @@ public:
             shader->Unbind();
         }
 
-        // === Render decorative heart (red cubes) ===
-        if (!heartVoxels.empty()) {
+        // === Render floating decorative cubes (casual mode) ===
+        if (!floatingCubes.empty()) {
             shader->Bind();
             shader->SetMat4("projection", projection);
             shader->SetMat4("view", view);
             glBindVertexArray(cubeVAO);
+            for (size_t i = 0; i < floatingCubes.size(); i++) {
+                const FloatingCube& fc = floatingCubes[i];
+                // fade out as lifetime decreases
+                float alpha = 1.0f;
+                if (fc.lifetime < 1.5f) {
+                    alpha = fc.lifetime / 1.5f;
+                }
+
+                mat4 model = mat4(1.0);
+                model[3] = vec4(fc.position, 1.0);
+                model = rotate(model, fc.bobPhase * 0.7f, vec3(0.0f, 1.0f, 0.0f));
+                model = rotate(model, fc.bobPhase * 0.5f, vec3(0.0f, 0.0f, 1.0f));
+                model = scale(model, vec3(fc.size));
+                shader->SetMat4("model", model);
+                shader->SetVec3("objColor", fc.color);
+                shader->SetFloat("objAlpha", alpha);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+            }
+            glBindVertexArray(0);
+            shader->Unbind();
+        }
+
+        // === Render single rotating heart (red cubes, left side) ===
+        if (!heartVoxels.empty() && !smallHeartPositions.empty()) {
+            shader->Bind();
+            shader->SetMat4("projection", projection);
+            shader->SetMat4("view", view);
+            shader->SetFloat("objAlpha", 1.0f);
+            glBindVertexArray(cubeVAO);
+            float hScale = 5.5f;
+            vec3 hPos = smallHeartPositions[0];
             for (size_t i = 0; i < heartVoxels.size(); i++) {
                 mat4 model = mat4(1.0);
-                model[3] = vec4(heartVoxels[i], 1.0);
+                model = translate(model, hPos);
+                model = rotate(model, heartZAngle, vec3(0.0f, 1.0f, 0.0f));  // Y-axis spin
+                model = translate(model, heartVoxels[i] * hScale);
                 model = scale(model, vec3(heartCubeSize));
                 shader->SetMat4("model", model);
                 shader->SetVec3("objColor", vec3(1.0f, 0.1f, 0.15f));
@@ -233,6 +376,67 @@ public:
             glBindVertexArray(0);
             shader->Unbind();
         }
+
+        // === Render glowing upward arrows below spike area ===
+        if (!arrowPositions.empty()) {
+            // yellow glow pulses
+            float glow = 0.5f + sin(arrowGlowPhase) * 0.5f;  // 0.0 to 1.0 pulsing
+            vec3 arrowColor = vec3(1.0f, 0.85f + glow * 0.15f, glow * 0.3f);
+
+            shader->Bind();
+            shader->SetMat4("projection", projection);
+            shader->SetMat4("view", view);
+            shader->SetVec3("objColor", arrowColor);
+            shader->SetFloat("objAlpha", 1.0f);
+            glBindVertexArray(arrowVAO);
+            for (size_t i = 0; i < arrowPositions.size(); i++) {
+                mat4 model = mat4(1.0);
+                model = translate(model, arrowPositions[i]);
+                // each arrow spins around Y at its own phase offset
+                float spin = arrowSpinAngle + i * 0.7f;
+                model = rotate(model, spin, vec3(0.0f, 1.0f, 0.0f));
+                model = scale(model, vec3(3.5f));  // arrow size
+                shader->SetMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 9);
+            }
+            glBindVertexArray(0);
+            shader->Unbind();
+        }
+    }
+
+private:
+    // Spawn a single floating decorative cube in the balloon area
+    void SpawnFloatingCube() {
+        FloatingCube fc;
+        // balloon area: x ~ -28 to 28, y ~ 3 to 50, z around -30
+        fc.position = vec3(
+            (rand() % 5600) / 100.0f - 28.0f,   // -28 to 28
+            3.0f + (rand() % 4700) / 100.0f,      // 3 to 50
+            -30.0f + (rand() % 1000) / 100.0f - 5.0f  // -35 to -25
+        );
+        // gentle random drift velocity
+        fc.velocity = vec3(
+            (rand() % 200 - 100) / 100.0f,   // -1.0 to 1.0
+            (rand() % 160 - 40) / 100.0f,    // -0.4 to 1.2 (slight upward bias)
+            (rand() % 60 - 30) / 100.0f       // -0.3 to 0.3
+        );
+        fc.maxLifetime = 4.0f + (rand() % 800) / 100.0f;  // 4 to 12 seconds
+        fc.lifetime = fc.maxLifetime;
+        fc.bobPhase = (rand() % 628) / 100.0f;  // random phase 0 to 2π
+        fc.size = floatingCubeBaseSize + (rand() % 60) / 100.0f;  // 0.7 to 1.3
+
+        // random warm colors (pink, red, orange, gold, peach)
+        int colorPick = rand() % 6;
+        switch (colorPick) {
+        case 0: fc.color = vec3(1.0f, 0.1f, 0.2f);  break;  // bright red
+        case 1: fc.color = vec3(1.0f, 0.4f, 0.5f);  break;  // pink
+        case 2: fc.color = vec3(1.0f, 0.6f, 0.15f); break;  // orange
+        case 3: fc.color = vec3(1.0f, 0.85f, 0.25f); break; // gold
+        case 4: fc.color = vec3(1.0f, 0.55f, 0.65f); break; // light pink
+        case 5: fc.color = vec3(0.95f, 0.2f, 0.35f); break; // crimson
+        }
+
+        floatingCubes.push_back(fc);
     }
 };
 

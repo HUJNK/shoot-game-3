@@ -36,6 +36,7 @@ private:
 	Shader* shader;
 	vec3 gravity;
 	vec3 debrisGravity;
+	float explosionSizeScale;
 
 public:
 	ParticleSystem() {
@@ -47,7 +48,10 @@ public:
 		glGenBuffers(1, &VBO_SIZE);
 		gravity = vec3(0.0f, -7.0f, 0.0f);
 		debrisGravity = vec3(0.0f, -18.0f, 0.0f);
+		explosionSizeScale = 1.0f;
 	}
+
+	void SetExplosionSizeScale(float s) { explosionSizeScale = s; }
 
 	void Explode(vec3 position, vec4 tintColor, int count = 80, ParticleType type = WATER) {
 		switch (type) {
@@ -201,7 +205,7 @@ private:
 			p.velocity.y = upSpeed;
 			p.velocity.z = sin(spreadAngle) * spreadRadius * upSpeed;
 			p.color = vec4(0.7f + (rand() % 30) / 100.0f, 0.85f + (rand() % 15) / 100.0f, 1.0f, 1.0f);
-			p.size = 6.0f + (rand() % 100) / 10.0f;
+			p.size = (6.0f + (rand() % 100) / 10.0f) * explosionSizeScale;
 			p.maxLife = 1.0f + (rand() % 100) / 80.0f;
 			p.life = p.maxLife;
 			p.type = WATER;
@@ -220,7 +224,7 @@ private:
 			p.velocity.y = sin(elevation) * speed;
 			p.velocity.z = cos(elevation) * sin(angle) * speed;
 			p.color = vec4(0.6f + (rand() % 40) / 100.0f, 0.8f + (rand() % 20) / 100.0f, 0.95f + (rand() % 5) / 100.0f, 1.0f);
-			p.size = 5.0f + (rand() % 100) / 10.0f;
+			p.size = (5.0f + (rand() % 100) / 10.0f) * explosionSizeScale;
 			p.maxLife = 0.8f + (rand() % 100) / 70.0f;
 			p.life = p.maxLife;
 			p.type = WATER;
@@ -238,7 +242,7 @@ private:
 			r.velocity.y = 2.0f + (rand() % 100) / 30.0f;
 			r.velocity.z = sin(ringAngle) * ringSpeed;
 			r.color = vec4(0.9f, 0.95f, 1.0f, 1.0f);
-			r.size = 8.0f + (rand() % 100) / 8.0f;
+			r.size = (8.0f + (rand() % 100) / 8.0f) * explosionSizeScale;
 			r.maxLife = 0.5f + (rand() % 100) / 100.0f;
 			r.life = r.maxLife;
 			r.type = WATER;
@@ -257,7 +261,7 @@ private:
 			m.velocity.y = sin(me) * ms;
 			m.velocity.z = cos(me) * sin(ma) * ms;
 			m.color = vec4(1.0f, 1.0f, 1.0f, 0.6f);
-			m.size = 4.0f + (rand() % 100) / 20.0f;
+			m.size = (4.0f + (rand() % 100) / 20.0f) * explosionSizeScale;
 			m.maxLife = 0.3f + (rand() % 100) / 200.0f;
 			m.life = m.maxLife;
 			m.type = WATER;

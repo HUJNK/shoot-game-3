@@ -217,11 +217,7 @@ public:
 				position[i].y += moveSpeed;
 
 				if (position[i].y >= SPIKE_TRIGGER_MIN_Y && position[i].y <= SPIKE_TRIGGER_MAX_Y) {
-					hitPositions.push_back(position[i]);
-					hitScores.push_back(1);
-					score++;
-					totalHits++;
-					hitThisFrame = true;
+					// spike zone: remove ball silently, no auto-score
 					number--;
 					ballColors.erase(ballColors.begin() + i);
 					ballScores.erase(ballScores.begin() + i);

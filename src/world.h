@@ -304,6 +304,7 @@ public:
 		tutorialActive = false;
 		if (num == 1) {
 			obstacles->InitCasual();
+			particles->SetExplosionSizeScale(1.6f);
 		}
 	}
 private:

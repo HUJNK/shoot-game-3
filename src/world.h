@@ -35,6 +35,7 @@ private:
 	float rapidFireTimer;
 	float rapidFireCooldown;
 	float slowMotionTimer;
+	float bossWarningTimer;  // screen flash + warning before boss spawn
 	float gameTime;
 	vec3 movingLightPos;
 	bool tutorialActive;
@@ -75,6 +76,7 @@ public:
 			rapidFireTimer = 0.0f;
 			rapidFireCooldown = 0.0f;
 			slowMotionTimer = 0.0f;
+			bossWarningTimer = 0.0f;
 			gameTime = 0.0f;
 
 		glGenFramebuffers(1, &depthMapFBO);
@@ -154,9 +156,9 @@ public:
 				}
 			}
 		}
-		// spawn obstacles for mode 2 when wave cleared
+		// spawn obstacles for mode 2 when wave cleared or game start
 		if (gameModel == 2 && obstacles->IsEmpty()) {
-			obstacles->SpawnWave();
+			obstacles->SpawnWave(waveNumber > 0 ? waveNumber : 1);
 		}
 			// casual mode: update moving obstacles
 			obstacles->Update(deltaTime, gameModel == 1);
@@ -175,6 +177,15 @@ public:
 					ball->Update(camera->GetPosition(), camera->GetFront(), true, deltaTime);
 				}
 				player->Update(deltaTime, true);
+			}
+		}
+
+		// boss warning countdown → spawn boss when timer expires
+		if (bossWarningTimer > 0.0f) {
+			bossWarningTimer -= deltaTime;
+			if (bossWarningTimer <= 0.0f) {
+				bossWarningTimer = 0.0f;
+				ball->SpawnPendingBoss();
 			}
 		}
 
@@ -227,6 +238,14 @@ public:
 		if (ball->CheckWaveTrigger()) {
 			waveNumber++;
 			hud->ShowWave(waveNumber);
+			// reset obstacles with scaled difficulty on each new wave
+			if (gameModel == 2) {
+				obstacles->SpawnWave(waveNumber);
+				// boss warning: start 2s countdown if boss is pending
+				if (ball->IsBossPending()) {
+					bossWarningTimer = 2.0f;
+				}
+			}
 		}
 		// ball trail particles for challenge mode
 		if (gameModel == 2) {
@@ -279,7 +298,8 @@ public:
 		// HUD: mode 1 shows casual, mode 2 shows challenge + effect timers
 		hud->Render((int)ball->GetLives(), (int)ball->GetScore(), (int)ball->GetComboMult(),
 			        (int)ball->GetTotalHits(), gameModel == 1, rapidFireTimer, slowMotionTimer,
-			        ball->IsBossActive(), ball->GetBossHP(), ball->GetBossMaxHP());
+			        ball->IsBossActive(), ball->GetBossHP(), ball->GetBossMaxHP(),
+			        bossWarningTimer);
 		}
 
 	GLuint GetScore() {

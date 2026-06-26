@@ -264,20 +264,39 @@ public:
         (void)isCasual;
     }
 
-    void SpawnWave() {
+    void SpawnWave(int waveNumber = 1) {
         obstacles.clear();
-        int count = 2 + rand() % (maxObstacles - 1);
+        // === Progressive difficulty scaling ===
+        // Count: starts at 3, +1 every 2 waves, cap at 8
+        int count = 3 + waveNumber / 2;
+        if (count > 8) count = 8;
+        // Health: base 2~3, +1 every 2 waves
+        int baseHealth = 2 + waveNumber / 2;
+        // Radius: base 3~5, slowly grows
+        float baseRadius = 3.0f + waveNumber * 0.4f;
+        // Tighter spawn around ball path (z: -35~35 instead of -20~40)
+        float tightZ = 20.0f + waveNumber * 2.0f;
+        if (tightZ > 50.0f) tightZ = 50.0f;
+
         for (int i = 0; i < count; i++) {
             Obstacle o;
             o.position.x = spawnMin.x + (rand() % 100) / 100.0f * (spawnMax.x - spawnMin.x);
             o.position.y = spawnMin.y + (rand() % 100) / 100.0f * (spawnMax.y - spawnMin.y);
-            o.position.z = spawnMin.z + (rand() % 100) / 100.0f * (spawnMax.z - spawnMin.z);
-            o.radius = 3.0f + (rand() % 100) / 20.0f;
-            o.maxHealth = 2 + rand() % 4;
+            o.position.z = spawnMin.z + (rand() % 100) / 100.0f * (tightZ - spawnMin.z);
+            o.radius = baseRadius + (rand() % 100) / 20.0f;
+            o.maxHealth = baseHealth + rand() % 4;
             o.health = o.maxHealth;
-            o.color = vec3(0.6f + (rand()%30)/100.0f, 0.3f + (rand()%20)/100.0f, 0.2f + (rand()%20)/100.0f);
+            o.color = vec3(
+                0.5f + (rand() % 40) / 100.0f,
+                0.2f + (rand() % 30) / 100.0f,
+                0.2f + (rand() % 30) / 100.0f
+            );
             obstacles.push_back(o);
         }
+
+        cout << "[WAVE " << waveNumber << "] Obstacles: " << count
+             << " | HP: " << baseHealth << "~" << (baseHealth + 3)
+             << " | Size: " << baseRadius << "~" << (baseRadius + 5.0f) << endl;
     }
 
     // check if a ray hits any obstacle, return hit position or (-999,...) if miss

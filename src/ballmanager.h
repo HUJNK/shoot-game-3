@@ -39,6 +39,7 @@ private:
 	int bossHP, bossMaxHP;
 	float bossPhase;
 	int bossWaveCount;
+	bool bossPending;   // delayed boss spawn for warning effect
 	float bossOriginalX, bossOriginalY;
 	GLuint totalHits;
 	vec3 lightPos;
@@ -81,6 +82,7 @@ public:
 		bossMaxHP = 0;
 		bossPhase = 0.0f;
 		bossWaveCount = 0;
+		bossPending = false;
 		this->lightPos = vec3(0.0, 400.0, 150.0);
 		mat4 lightProjection = ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 500.0f);
 		mat4 lightView = lookAt(lightPos, vec3(0.0f), vec3(0.0, 1.0, 0.0));
@@ -265,9 +267,9 @@ public:
 			}
 			AddBall();
 			waveTriggered = true;
-			// spawn boss every 5 waves (challenge mode only)
+			// mark boss pending every 5 waves; delayed spawn for warning
 			if (gameModel == 2 && bossWaveCount % 5 == 0) {
-				SpawnBoss();
+				bossPending = true;
 			}
 		}
 	}
@@ -327,8 +329,11 @@ public:
 		return false;
 	}
 	bool IsBossActive() { return bossActive; }
+	bool IsBossPending() { return bossPending; }
+	void SpawnPendingBoss() { if (bossPending) { SpawnBoss(); bossPending = false; } }
 	int GetBossHP() { return bossHP; }
 	int GetBossMaxHP() { return bossMaxHP; }
+	int GetBossWaveCount() { return bossWaveCount; }
 
 	void Render(Shader* shader, GLuint depthMap = -1) {
 		for (GLuint i = 0; i < position.size(); i++) {

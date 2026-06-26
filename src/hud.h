@@ -14,6 +14,7 @@ private:
     // wave notification state
     int waveNum;
     float waveTimer;
+    float hudTime;  // accumulated time for screen effect animations
     static const float WAVE_DURATION;
 
     // 3x5 dot matrix patterns for digits 0-9
@@ -221,6 +222,7 @@ public:
         glGenBuffers(1, &VBO_COLOR);
         waveNum = 0;
         waveTimer = 0.0f;
+        hudTime = 0.0f;
     }
 
     void ShowWave(int n) {
@@ -229,6 +231,7 @@ public:
     }
 
     void Update(float deltaTime) {
+        hudTime += deltaTime;
         if (waveTimer > 0.0f) {
             waveTimer -= deltaTime;
             if (waveTimer < 0.0f) waveTimer = 0.0f;
@@ -299,7 +302,7 @@ public:
         glEnable(GL_DEPTH_TEST); glBindVertexArray(0); shader->Unbind();
     }
 
-    void Render(int lives, int score, int comboMult, int hitsCount, bool isCasualMode, float rapidTimer = 0.0f, float slowTimer = 0.0f, bool bossActive = false, int bossHP = 0, int bossMaxHP = 0) {
+    void Render(int lives, int score, int comboMult, int hitsCount, bool isCasualMode, float rapidTimer = 0.0f, float slowTimer = 0.0f, bool bossActive = false, int bossHP = 0, int bossMaxHP = 0, float bossWarningTimer = 0.0f) {
         shader->Bind();
         glBindVertexArray(VAO);
         glDisable(GL_DEPTH_TEST);
@@ -489,6 +492,53 @@ public:
             drawQuad(lineX, wY + 0.06f, lineW, lineH, r, g, bCol, fadeAlpha);
             drawQuad(lineX, wY - 5.0f * wDotSize - 0.06f, lineW, lineH, r, g, bCol, fadeAlpha);
         }
+		// ═══════════════════════════════════════════════
+		// SCREEN-SPACE EFFECTS (mode 2 only)
+		// ═══════════════════════════════════════════════
+		if (!isCasualMode) {
+
+			// === A. BOSS WARNING: red border pulse + "BOSS" text ===
+			if (bossWarningTimer > 0.0f) {
+				float t = bossWarningTimer / 2.0f;
+				float pulse = 0.5f + 0.5f * sin(t * 20.0f);
+				float alpha = t * pulse;
+				float bw = 0.06f;
+				drawQuad(-1.0f,  1.0f - bw, 2.0f, bw, 1.0f, 0.1f, 0.05f, alpha);
+				drawQuad(-1.0f, -1.0f,        2.0f, bw, 1.0f, 0.1f, 0.05f, alpha);
+				drawQuad(-1.0f, -1.0f,        bw, 2.0f, 1.0f, 0.1f, 0.05f, alpha);
+				drawQuad( 1.0f - bw, -1.0f,   bw, 2.0f, 1.0f, 0.1f, 0.05f, alpha);
+				float bDot = 0.06f, bGap = 0.01f, bw5 = 5.0f*(bDot+bGap);
+				float btw = bw5*4.0f + bGap*4.0f;
+				float bx = -btw/2.0f, by = 0.0f, ba = alpha * 1.2f;
+				if (ba > 1.0f) ba = 1.0f;
+				drawLetter('B', bx, by, bDot, bGap, 1,0.15f,0.05f, ba); bx+=bw5+bGap;
+				drawLetter('O', bx, by, bDot, bGap, 1,0.15f,0.05f, ba); bx+=bw5+bGap;
+				drawLetter('S', bx, by, bDot, bGap, 1,0.15f,0.05f, ba); bx+=bw5+bGap;
+				drawLetter('S', bx, by, bDot, bGap, 1,0.15f,0.05f, ba);
+			}
+
+			// === B. COMBO HEAT: golden edge glow at combo >= 3 ===
+			if (comboMult >= 3) {
+				float heatAlpha = (comboMult - 2) / 3.0f;
+				float hw = 0.04f + heatAlpha * 0.04f;
+				drawQuad(-1.0f,  1.0f - hw, 2.0f, hw, 1.0f, 0.7f, 0.1f, heatAlpha * 0.8f);
+				drawQuad(-1.0f, -1.0f,        2.0f, hw, 1.0f, 0.7f, 0.1f, heatAlpha * 0.8f);
+				drawQuad(-1.0f, -1.0f,        hw, 2.0f, 1.0f, 0.7f, 0.1f, heatAlpha * 0.7f);
+				drawQuad( 1.0f - hw, -1.0f,   hw, 2.0f, 1.0f, 0.7f, 0.1f, heatAlpha * 0.7f);
+			}
+
+			// === C. LOW HEALTH: red vignette corners when lives == 1 ===
+			if (lives == 1) {
+				float pulse = 0.5f + 0.5f * sin(hudTime * 3.5f);
+				float vAlpha = 0.35f + pulse * 0.2f;
+				float cs = 0.5f;
+				drawQuad(-1.0f, 1.0f - cs, cs, cs, 0.9f, 0.05f, 0.05f, vAlpha);
+				drawQuad(1.0f - cs, 1.0f - cs, cs, cs, 0.9f, 0.05f, 0.05f, vAlpha);
+				drawQuad(-1.0f, -1.0f, cs, cs, 0.9f, 0.05f, 0.05f, vAlpha);
+				drawQuad(1.0f - cs, -1.0f, cs, cs, 0.9f, 0.05f, 0.05f, vAlpha);
+			}
+		}
+
         glEnable(GL_DEPTH_TEST);
         glBindVertexArray(0);
         shader->Unbind();

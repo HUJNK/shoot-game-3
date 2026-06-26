@@ -166,10 +166,14 @@ public:
 			// === Regular ball hit check ===
 			if (!bossWasHit) {
 			vector<vec3> temp;
+			vector<vec3> tempColors;
+			vector<int> tempScores;
 			for (GLuint i = 0; i < position.size(); i++) {
 				vec3 des = (pos.z - position[i].z) / (-dir.z) * dir + pos;
 				if (pow(position[i].x - des.x, 2) + pow(position[i].y - des.y, 2) > 5) {
 					temp.push_back(position[i]);
+					tempColors.push_back(ballColors[i]);
+					tempScores.push_back(ballScores[i]);
 				}
 				else {
 					number--;
@@ -206,6 +210,8 @@ public:
 				}
 			}
 			position = temp;
+			ballColors = tempColors;
+			ballScores = tempScores;
 			} // end if (!bossWasHit)
 			if (!hitThisFrame) combo = 0;
 		}

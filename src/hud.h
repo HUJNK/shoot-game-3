@@ -316,10 +316,9 @@ public:
             if (hits == 0) { hitDigits[0] = 0; numHitDigits = 1; }
             else { while (hits > 0 && numHitDigits < 10) { hitDigits[numHitDigits++] = hits % 10; hits /= 10; } }
             float hitValX = leftX;
-            float digitSpacing = dotSize * 3.0f + gap * 2.0f + dotSize * 0.8f;  // digit width + extra gap
             for (int i = numHitDigits - 1; i >= 0; i--) {
                 drawDigit(hitDigits[i], hitValX, leftY, dotSize, gap, 1.0f, 1.0f, 0.3f, 1.0f);
-                hitValX += digitSpacing;
+                hitValX += dotSize * 3.5f;
             }
 
             // Score (bottom row, white)
@@ -332,7 +331,7 @@ public:
             float scoreValX = leftX;
             for (int i = numScoreDigits - 1; i >= 0; i--) {
                 drawDigit(scoreDigits[i], scoreValX, scoreY, dotSize, gap, 1.0f, 1.0f, 1.0f, 1.0f);
-                scoreValX += digitSpacing;
+                scoreValX += dotSize * 3.5f;
             }
 
             // === Center: Combo (only when active) ===
@@ -455,24 +454,28 @@ public:
 			}
 		}
 
-	        // === WAVE NOTIFICATION: centered fading digit ===
+	        // === WAVE NOTIFICATION: centered fading "WAVE N" ===
 		        if (waveTimer > 0.0f) {
 		            float alpha = waveTimer / WAVE_DURATION;
 		            float fadeAlpha;
 		            if (alpha > 0.7f) fadeAlpha = (1.0f - alpha) / 0.3f;
 		            else fadeAlpha = alpha / 0.7f;
 		            float r = 1.0f, g = 0.75f, bCol = 0.1f;
-		            float wDotSize = 0.05f, wGap = 0.008f;
-		            float wSpacing = wDotSize * 3.5f + wGap;  // wider gap for 2+ digit waves
+		            float wDotSize = 0.035f, wGap = 0.008f;
+		            float lw5 = 5.0f * (wDotSize + wGap);
 		            int wn = waveNum, wDigits[10], wNumDigits = 0;
 		            if (wn == 0) { wDigits[0] = 0; wNumDigits = 1; }
 		            else { while (wn > 0 && wNumDigits < 10) { wDigits[wNumDigits++] = wn % 10; wn /= 10; } }
-		            float numWidth = wNumDigits * wSpacing;
-		            float totalW = numWidth;
+		            float numWidth = wNumDigits * (wDotSize * 3.0f + wGap);
+		            float totalW = lw5 * 4.0f + wGap * 4.0f + numWidth;
 		            float startX = -totalW / 2.0f, wY = 0.22f, wx = startX;
+		            drawLetter('W', wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha); wx += lw5 + wGap;
+		            drawLetter('A', wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha); wx += lw5 + wGap;
+		            drawLetter('V', wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha); wx += lw5 + wGap;
+		            drawLetter('E', wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha); wx += lw5 + wGap;
 		            for (int i = wNumDigits - 1; i >= 0; i--) {
 		                drawDigit(wDigits[i], wx, wY, wDotSize, wGap, r, g, bCol, fadeAlpha);
-		                wx += wSpacing;
+		                wx += wDotSize * 3.0f + wGap;
 		            }
 		            float lineW = totalW + 0.12f, lineH = 0.006f, lineX = -lineW / 2.0f;
 		            drawQuad(lineX, wY + 0.06f, lineW, lineH, r, g, bCol, fadeAlpha);

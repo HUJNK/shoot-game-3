@@ -155,6 +155,24 @@ public:
 
 	bool IsEmpty() { return items.empty(); }
 
+	// Depth-only render for shadow map (items cast shadows)
+	void RenderDepth(Shader* depthShader, mat4 lightSpaceMatrix) {
+		if (items.empty()) return;
+		depthShader->Bind();
+		depthShader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+		glBindVertexArray(cubeVAO);
+		for (auto& item : items) {
+			mat4 model = mat4(1.0);
+			model[3] = vec4(item.position, 1.0);
+			float s = 2.0f + sin(item.bobPhase) * 0.3f;
+			model = scale(model, vec3(s));
+			depthShader->SetMat4("model", model);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+		glBindVertexArray(0);
+		depthShader->Unbind();
+	}
+
 	void Render(mat4 projection, mat4 view, float time) {
 		for (auto& item : items) {
 			mat4 model = mat4(1.0);

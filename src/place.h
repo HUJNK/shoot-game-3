@@ -12,14 +12,21 @@
 class Place {
 private:
 	glm::vec2 windowSize;
-	// ·¿¼äÄ£ÐÍ + Á½Ì×Ç½Ãæ
+	// ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ + ï¿½ï¿½ï¿½ï¿½Ç½ï¿½ï¿½
 	Model* room = nullptr;
-	Texture* texWallChallenge = nullptr; // ÌôÕ½ wall_1.jpg
-	Texture* texWallRelax = nullptr;     // ÐÝÏÐ wall_2.jpg
+	Texture* texWallChallenge = nullptr; // ï¿½ï¿½Õ½ wall_1.jpg
+	Texture* texWallRelax = nullptr;     // ï¿½ï¿½ï¿½ï¿½ wall_2.jpg
+	Texture* texSchool = nullptr;        // school.png for front wall
+	Texture* texFloor = nullptr;         // floor.jpg for floor
+	Texture* texSideWall = nullptr;      // sidewall.jpg for left/right walls
+	Texture* texCeiling = nullptr;       // ceiling.jpg for ceiling
+	Texture* texSignature = nullptr;     // signature (student.bmp) on ceiling
 	Shader* roomShader = nullptr;
 
-	// Ì«Ñô¹âÔ´
+	// Ì«ï¿½ï¿½ï¿½ï¿½Ô´
 	Model* sun = nullptr;
+	vec3 star1Pos, star2Pos;
+	float starGlow;
 	glm::vec3 lightPos;
 	glm::mat4 lightSpaceMatrix;
 	Shader* sunShader = nullptr;
@@ -29,13 +36,16 @@ private:
 	glm::mat4 projection;
 	glm::mat4 view;
 
-	int gameModel; // 1ÐÝÏÐ  2ÌôÕ½
+	int gameModel; // 1ï¿½ï¿½ï¿½ï¿½  2ï¿½ï¿½Õ½
 
 public:
 	Place(glm::vec2 windowSize, Camera* camera) {
 		this->windowSize = windowSize;
 		this->camera = camera;
-		gameModel = 2; // Ä¬ÈÏÌôÕ½Ä£Ê½
+		gameModel = 2; // Ä¬ï¿½ï¿½ï¿½ï¿½Õ½Ä£Ê½
+		star1Pos = vec3(-40.0f, 50.0f, -50.0f);
+		star2Pos = vec3( 40.0f, 50.0f, -50.0f);
+		starGlow = 0.0f;
 		this->lightPos = glm::vec3(0.0f, 400.0f, 150.0f);
 
 		glm::mat4 lightProjection = glm::ortho(-100.0f, 100.0f, -100.0f, 100.0f, 1.0f, 500.0f);
@@ -47,24 +57,29 @@ public:
 		LoadShader();
 	}
 
-	// Îö¹¹ÊÍ·ÅËùÓÐ¶Ñ×ÊÔ´£¬·ÀÖ¹ÄÚ´æÐ¹Â©
+	// ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½Ö¹ï¿½Ú´ï¿½Ð¹Â©
 	~Place()
 	{
 		delete room;
 		delete sun;
 		delete texWallChallenge;
 		delete texWallRelax;
+			delete texSchool;
+			delete texFloor;
+			delete texSideWall;
+			delete texCeiling;
+			delete texSignature;
 		delete roomShader;
 		delete sunShader;
 	}
 
-	// Worldµ÷ÓÃ£¬´«ÈëÓÎÏ·Ä£Ê½
+	// Worldï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·Ä£Ê½
 	void SetGameModel(int mode)
 	{
 		gameModel = mode;
 	}
 
-	// ¸üÐÂ±ä»»¾ØÕó
+	// ï¿½ï¿½ï¿½Â±ä»»ï¿½ï¿½ï¿½ï¿½
 	void Update() {
 		this->model = glm::mat4(1.0f);
 		this->view = camera->GetViewMatrix();
@@ -72,7 +87,7 @@ public:
 		this->projection = glm::perspective(glm::radians(camera->GetZoom()), aspect, 0.1f, 500.0f);
 	}
 
-	// äÖÈ¾·¿¼ä£º×Ô¶¯ÇÐ»»Á½ÕÅÇ½Ãæ
+	// ï¿½ï¿½È¾ï¿½ï¿½ï¿½ä£ºï¿½Ô¶ï¿½ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½Ç½ï¿½ï¿½
 	void RoomRender(Shader* shader = nullptr, int depthMap = -1) {
 		Shader* useShader = shader;
 		if (useShader == nullptr) {
@@ -86,24 +101,44 @@ public:
 		}
 		useShader->SetMat4("model", model);
 
-		// ÎÆÀíµ¥Ôª0£º¸ù¾ÝÄ£Ê½ÇÐ»»Ç½Ãæ
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôª0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½Ð»ï¿½Ç½ï¿½ï¿½
 		glActiveTexture(GL_TEXTURE0);
 		if (gameModel == 1)
 		{
-			// ÐÝÏÐÄ£Ê½ wall_2.jpg
+			// ï¿½ï¿½ï¿½ï¿½Ä£Ê½ wall_2.jpg
 			glBindTexture(GL_TEXTURE_2D, texWallRelax->GetId());
 		}
 		else
 		{
-			// ÌôÕ½Ä£Ê½ wall_1.jpg
+			// ï¿½ï¿½Õ½Ä£Ê½ wall_1.jpg
 			glBindTexture(GL_TEXTURE_2D, texWallChallenge->GetId());
 		}
 
-		// ÎÆÀíµ¥Ôª1£ºÒõÓ°ÌùÍ¼
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôª1ï¿½ï¿½ï¿½ï¿½Ó°ï¿½ï¿½Í¼
 		if (depthMap != -1) {
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_2D, depthMap);
 		}
+
+		// school.png on unit 2 for front wall
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, texSchool->GetId());
+
+		// floor.jpg on unit 3
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, texFloor->GetId());
+
+		// sidewall.jpg on unit 4
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, texSideWall->GetId());
+
+		// ceiling.jpg on unit 5
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, texCeiling->GetId());
+
+		// signature on unit 6
+		glActiveTexture(GL_TEXTURE6);
+		glBindTexture(GL_TEXTURE_2D, texSignature->GetId());
 
 		glBindVertexArray(room->GetVAO());
 		glDrawElements(GL_TRIANGLES, static_cast<GLuint>(room->GetIndices().size()), GL_UNSIGNED_INT, nullptr);
@@ -111,7 +146,30 @@ public:
 		useShader->Unbind();
 	}
 
-	// äÖÈ¾Ì«Ñô£¨Âß¼­²»±ä£©
+	// ï¿½ï¿½È¾Ì«ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ä£©
+	void StarRender(Model* ballModel, Shader* ballShader) {
+		starGlow += 0.05f;
+		float pulse = 1.0f + sin(starGlow * 2.5f) * 0.4f;
+		float sz = 8.0f * pulse;
+		glDepthMask(GL_FALSE);
+		ballShader->Bind();
+		ballShader->SetMat4("projection", projection);
+		ballShader->SetMat4("view", view);
+		ballShader->SetVec3("color", vec3(1.0f, 0.85f, 0.15f));
+		mat4 m1 = translate(mat4(1.0f), star1Pos);
+		m1 = scale(m1, vec3(sz));
+		ballShader->SetMat4("model", m1);
+		glBindVertexArray(ballModel->GetVAO());
+		glDrawElements(GL_TRIANGLES, static_cast<GLuint>(ballModel->GetIndices().size()), GL_UNSIGNED_INT, nullptr);
+		mat4 m2 = translate(mat4(1.0f), star2Pos);
+		m2 = scale(m2, vec3(sz));
+		ballShader->SetMat4("model", m2);
+		glDrawElements(GL_TRIANGLES, static_cast<GLuint>(ballModel->GetIndices().size()), GL_UNSIGNED_INT, nullptr);
+		glBindVertexArray(0);
+		ballShader->Unbind();
+		glDepthMask(GL_TRUE);
+	}
+
 	void SunRender() {
 		Shader* shader = sunShader;
 		shader->Bind();
@@ -124,24 +182,34 @@ public:
 		shader->Unbind();
 	}
 private:
-	// ¼ÓÔØ·¿¼ä¡¢Ì«ÑôÄ£ÐÍ
+	// ï¿½ï¿½ï¿½Ø·ï¿½ï¿½ä¡¢Ì«ï¿½ï¿½Ä£ï¿½ï¿½
 	void LoadModel() {
 		room = new Model("res/model/room.obj");
 		sun = new Model("res/model/sun.obj");
 	}
 
-	// ¼ÓÔØÁ½ÕÅÇ½ÃæÌùÍ¼£¨Æ¥ÅäÄãµÄwall_1¡¢wall_2£©
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½wall_1ï¿½ï¿½wall_2ï¿½ï¿½
 	void LoadTexture() {
-		texWallChallenge = new Texture("res/texture/wall_1.jpg");
+		texWallChallenge = new Texture("res/texture/wall_new.jpg");
 		texWallRelax = new Texture("res/texture/wall_2.jpg");
+			texSchool = new Texture("res/texture/school.png");
+			texFloor = new Texture("res/texture/floor.jpg");
+			texSideWall = new Texture("res/texture/sidewall.jpg");
+			texCeiling = new Texture("res/texture/cloud.jpg");
+			texSignature = new Texture("res/texture/signature.bmp");
 	}
 
-	// ¼ÓÔØ×ÅÉ«Æ÷
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½
 	void LoadShader() {
 		roomShader = new Shader("res/shader/room.vert", "res/shader/room.frag");
 		roomShader->Bind();
 		roomShader->SetInt("diffuse", 0);
 		roomShader->SetInt("shadowMap", 1);
+			roomShader->SetInt("schoolTex", 2);
+			roomShader->SetInt("floorTex", 3);
+			roomShader->SetInt("sideWallTex", 4);
+			roomShader->SetInt("ceilingTex", 5);
+			roomShader->SetInt("signatureTex", 6);
 		roomShader->SetVec3("lightPos", lightPos);
 		roomShader->SetVec3("viewPos", camera->GetPosition());
 		roomShader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);

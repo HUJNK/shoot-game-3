@@ -35,7 +35,7 @@ void main() {
     float hemi = norm.y * 0.5 + 0.5;
     vec3 skyAmbient = vec3(0.25, 0.35, 0.55);
     vec3 groundAmbient = vec3(0.15, 0.12, 0.08);
-    vec3 ambient = mix(groundAmbient, skyAmbient, hemi) * lightColor;
+    vec3 ambient = mix(groundAmbient, skyAmbient, hemi) * lightColor * 1.6;
 
     // diffuse
     float diff = max(dot(norm, lightDir), 0.0);
@@ -68,6 +68,32 @@ void main() {
     float movingSpec = pow(max(dot(norm, movingHalf), 0.0), 32.0);
     vec3 movingLight = movingAtten * movingLightColor * (movingDiff * 0.7 + movingSpec * 0.3);
     result += movingLight * color;
+
+    // === Star point lights (subtle) ===
+    vec3 star1 = vec3(-40.0, 50.0, -50.0);
+    vec3 star2 = vec3( 40.0, 50.0, -50.0);
+    vec3 starColor = vec3(1.0, 0.95, 0.7);
+    float sd1 = length(star1 - Position);
+    float sd2 = length(star2 - Position);
+    result += starColor * color * 0.24 / (1.0 + 0.004 * sd1 * sd1);
+    result += starColor * color * 0.24 / (1.0 + 0.004 * sd2 * sd2);
+
+	// === Environment Mapping: metallic reflection of sky ===
+	vec3 reflectDir = reflect(-viewDir, norm);
+	float reflY = reflectDir.y;
+	// sky gradient sampled by reflection direction
+	vec3 reflTop = vec3(0.15, 0.25, 0.55);
+	vec3 reflHorizon = vec3(0.55, 0.72, 0.95);
+	vec3 reflGround = vec3(0.3, 0.22, 0.15);
+	float reflT = smoothstep(-0.2, 0.5, reflY);
+	vec3 reflSky = mix(reflHorizon, reflTop, reflT);
+	reflSky = mix(reflGround, reflSky, smoothstep(-0.1, 0.1, reflY));
+	// sun highlight in reflection
+	float reflSun = pow(max(dot(reflectDir, normalize(vec3(0.3, 0.6, 0.5))), 0.0), 32.0);
+	reflSky += vec3(1.0, 0.9, 0.5) * reflSun * 0.6;
+	// metallic Fresnel: edge reflection stronger than center
+	float metallic = 0.15 + rim * 0.35;  // rim is already computed
+	result = mix(result, reflSky * color, metallic);
 
     result *= color;
 

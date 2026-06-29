@@ -41,6 +41,9 @@ private:
 	int bossWaveCount;
 	bool bossPending;   // delayed boss spawn for warning effect
 	float bossOriginalX, bossOriginalY;
+	// Bezier curve control points for boss movement
+	vec3 bossBezP0, bossBezP1, bossBezP2, bossBezP3;
+	float bossBezDuration;
 	GLuint totalHits;
 	vec3 lightPos;
 	mat4 lightSpaceMatrix;
@@ -112,11 +115,33 @@ public:
 		bool hitThisFrame = false;
 		this->projection = perspective(radians(camera->GetZoom()), windowSize.x / windowSize.y, 0.1f, 500.0f);
 
-		// === Boss movement (challenge mode) ===
+		// === Boss movement with cubic Bezier curve (challenge mode) ===
 		if (bossActive && gameModel == 2) {
 			bossPhase += deltaTime;
-			bossPosition.x = bossOriginalX + sin(bossPhase * 2.0f) * 15.0f;
-			bossPosition.y = bossOriginalY + cos(bossPhase * 1.5f) * 4.0f;
+			// Cubic Bezier: B(t) = (1-t)³P0 + 3(1-t)²tP1 + 3(1-t)t²P2 + t³P3
+			float t = bossPhase / bossBezDuration;
+			if (t >= 1.0f) {
+				// Generate new curve segment from current position
+				t = 0.0f;
+				bossPhase = 0.0f;
+				bossBezP0 = bossPosition;
+				bossBezP1 = bossBezP0 + vec3((rand()%40-20)*0.8f, (rand()%20-5)*0.8f, 0.0f);
+				bossBezP2 = vec3(bossOriginalX + (rand()%30-15)*1.0f,
+				                 bossOriginalY + (rand()%20-8)*1.0f,
+				                 bossPosition.z + 8.0f);
+				bossBezP3 = vec3(bossOriginalX + (rand()%30-15)*1.0f,
+				                 bossOriginalY + (rand()%20-8)*1.0f,
+				                 bossPosition.z + 15.0f);
+			}
+			float t2 = t * t, t3 = t2 * t;
+			float u = 1.0f - t, u2 = u * u, u3 = u2 * u;
+			vec3 bezierPos = u3 * bossBezP0
+			               + 3.0f * u2 * t * bossBezP1
+			               + 3.0f * u * t2 * bossBezP2
+			               + t3 * bossBezP3;
+			bossPosition.x = bezierPos.x;
+			bossPosition.y = bezierPos.y;
+			// z advances steadily forward
 			float effBossSpeed = slowMotion ? moveSpeed * 0.4f * 0.6f : moveSpeed * 0.6f;
 			bossPosition.z += effBossSpeed;
 			if (bossPosition.z >= 70) {
@@ -328,8 +353,12 @@ public:
 		}
 		return false;
 	}
+	GLuint GetBallVAO() { return ball->GetVAO(); }
+	vector<GLuint> GetBallIndices() { return ball->GetIndices(); }
+	Shader* GetBallShader() { return ballShader; }
 	bool IsBossActive() { return bossActive; }
 	bool IsBossPending() { return bossPending; }
+	vec3 GetBossPosition() { return bossPosition; }
 	void SpawnPendingBoss() { if (bossPending) { SpawnBoss(); bossPending = false; } }
 	int GetBossHP() { return bossHP; }
 	int GetBossMaxHP() { return bossMaxHP; }
@@ -420,7 +449,17 @@ private:
 		bossOriginalY = 8.0f + (float)(rand() % 15);
 		bossPosition = vec3(bossOriginalX, bossOriginalY, basicPos.z - 15.0f);
 		bossPhase = 0.0f;
-		cout << "=== BOSS WAVE " << bossWaveCount << "! HP: " << bossMaxHP << " ===" << endl;
+		// Initialize cubic Bezier control points
+		bossBezP0 = bossPosition;
+		bossBezP1 = bossBezP0 + vec3((rand()%40-20)*0.8f, (rand()%20-5)*0.8f, 0.0f);
+		bossBezP2 = vec3(bossOriginalX + (rand()%30-15)*1.0f,
+		                 bossOriginalY + (rand()%20-8)*1.0f,
+		                 bossPosition.z + 8.0f);
+		bossBezP3 = vec3(bossOriginalX + (rand()%30-15)*1.0f,
+		                 bossOriginalY + (rand()%20-8)*1.0f,
+		                 bossPosition.z + 15.0f);
+		bossBezDuration = 3.0f + (rand() % 100) / 50.0f;  // 3~5 seconds per segment
+		cout << "=== BOSS WAVE " << bossWaveCount << "! HP: " << bossMaxHP << " [Bezier Curve] ===" << endl;
 	}
 
 	void AddBall() {

@@ -692,6 +692,8 @@
     <Library Include="library\lib\glfw3.lib" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\texture\ceiling.jpg" />
+    <Image Include="res\texture\floor.jpg" />
     <Image Include="res\texture\gun-diffuse-map.jpg" />
     <Image Include="res\texture\gun-diffuse-map.png" />
     <Image Include="res\texture\gun-emission-map.png" />

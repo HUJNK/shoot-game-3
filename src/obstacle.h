@@ -10,6 +10,7 @@ using namespace glm;
 #include <cstdlib>
 using namespace std;
 #include "shader.h"
+#include "texture.h"
 
 struct Obstacle {
     vec3 position;
@@ -17,6 +18,7 @@ struct Obstacle {
     int health;        // hits to destroy
     int maxHealth;
     vec3 color;
+    bool useTex;       // whether to apply texture
 };
 
 // casual mode: movement state per obstacle
@@ -58,39 +60,48 @@ private:
     float arrowGlowPhase;
     float arrowSpinAngle;
     Shader* shader;
+    Texture* obstacleTex;
     GLuint cubeVAO, cubeVBO;
     int maxObstacles;
-    vec3 spawnMin, spawnMax;  // spawn area
+    vec3 spawnMin, spawnMax;
+    vec3 viewPos;           // camera position for specular
+    vec3 movingLightPos;    // orbiting warm light
 
-    // unit cube vertices (position + normal)
+    // unit cube vertices (position + normal + texcoord)
     float cubeVerts[288] = {
-        // front face
-        -0.5f,-0.5f, 0.5f,  0,0,1,   0.5f,-0.5f, 0.5f,  0,0,1,   0.5f, 0.5f, 0.5f,  0,0,1,
-        -0.5f,-0.5f, 0.5f,  0,0,1,   0.5f, 0.5f, 0.5f,  0,0,1,  -0.5f, 0.5f, 0.5f,  0,0,1,
-        // back
-         0.5f,-0.5f,-0.5f,  0,0,-1,  -0.5f,-0.5f,-0.5f,  0,0,-1,  -0.5f, 0.5f,-0.5f,  0,0,-1,
-         0.5f,-0.5f,-0.5f,  0,0,-1,  -0.5f, 0.5f,-0.5f,  0,0,-1,   0.5f, 0.5f,-0.5f,  0,0,-1,
-        // top
-        -0.5f, 0.5f,-0.5f,  0,1,0,  -0.5f, 0.5f, 0.5f,  0,1,0,   0.5f, 0.5f, 0.5f,  0,1,0,
-        -0.5f, 0.5f,-0.5f,  0,1,0,   0.5f, 0.5f, 0.5f,  0,1,0,   0.5f, 0.5f,-0.5f,  0,1,0,
-        // bottom
-        -0.5f,-0.5f,-0.5f,  0,-1,0,   0.5f,-0.5f, 0.5f,  0,-1,0,  -0.5f,-0.5f, 0.5f,  0,-1,0,
-        -0.5f,-0.5f,-0.5f,  0,-1,0,   0.5f,-0.5f,-0.5f,  0,-1,0,   0.5f,-0.5f, 0.5f,  0,-1,0,
-        // right
-         0.5f,-0.5f, 0.5f,  1,0,0,   0.5f,-0.5f,-0.5f,  1,0,0,   0.5f, 0.5f,-0.5f,  1,0,0,
-         0.5f,-0.5f, 0.5f,  1,0,0,   0.5f, 0.5f,-0.5f,  1,0,0,   0.5f, 0.5f, 0.5f,  1,0,0,
-        // left
-        -0.5f,-0.5f,-0.5f, -1,0,0,  -0.5f,-0.5f, 0.5f, -1,0,0,  -0.5f, 0.5f, 0.5f, -1,0,0,
-        -0.5f,-0.5f,-0.5f, -1,0,0,  -0.5f, 0.5f, 0.5f, -1,0,0,  -0.5f, 0.5f,-0.5f, -1,0,0,
+        // front face (z+)
+        -0.5f,-0.5f, 0.5f,  0,0,1,  0,0,   0.5f,-0.5f, 0.5f,  0,0,1,  1,0,   0.5f, 0.5f, 0.5f,  0,0,1,  1,1,
+        -0.5f,-0.5f, 0.5f,  0,0,1,  0,0,   0.5f, 0.5f, 0.5f,  0,0,1,  1,1,  -0.5f, 0.5f, 0.5f,  0,0,1,  0,1,
+        // back face (z-)
+         0.5f,-0.5f,-0.5f,  0,0,-1,  0,0,  -0.5f,-0.5f,-0.5f,  0,0,-1,  1,0,  -0.5f, 0.5f,-0.5f,  0,0,-1,  1,1,
+         0.5f,-0.5f,-0.5f,  0,0,-1,  0,0,  -0.5f, 0.5f,-0.5f,  0,0,-1,  1,1,   0.5f, 0.5f,-0.5f,  0,0,-1,  0,1,
+        // top face (y+)
+        -0.5f, 0.5f,-0.5f,  0,1,0,  0,0,  -0.5f, 0.5f, 0.5f,  0,1,0,  0,1,   0.5f, 0.5f, 0.5f,  0,1,0,  1,1,
+        -0.5f, 0.5f,-0.5f,  0,1,0,  0,0,   0.5f, 0.5f, 0.5f,  0,1,0,  1,1,   0.5f, 0.5f,-0.5f,  0,1,0,  1,0,
+        // bottom face (y-)
+        -0.5f,-0.5f,-0.5f,  0,-1,0,  0,0,   0.5f,-0.5f, 0.5f,  0,-1,0,  1,1,  -0.5f,-0.5f, 0.5f,  0,-1,0,  0,1,
+        -0.5f,-0.5f,-0.5f,  0,-1,0,  0,0,   0.5f,-0.5f,-0.5f,  0,-1,0,  1,0,   0.5f,-0.5f, 0.5f,  0,-1,0,  1,1,
+        // right face (x+)
+         0.5f,-0.5f, 0.5f,  1,0,0,  0,0,   0.5f,-0.5f,-0.5f,  1,0,0,  1,0,   0.5f, 0.5f,-0.5f,  1,0,0,  1,1,
+         0.5f,-0.5f, 0.5f,  1,0,0,  0,0,   0.5f, 0.5f,-0.5f,  1,0,0,  1,1,   0.5f, 0.5f, 0.5f,  1,0,0,  0,1,
+        // left face (x-)
+        -0.5f,-0.5f,-0.5f, -1,0,0,  0,0,  -0.5f,-0.5f, 0.5f, -1,0,0,  1,0,  -0.5f, 0.5f, 0.5f, -1,0,0,  1,1,
+        -0.5f,-0.5f,-0.5f, -1,0,0,  0,0,  -0.5f, 0.5f, 0.5f, -1,0,0,  1,1,  -0.5f, 0.5f,-0.5f, -1,0,0,  0,1,
     };
 
 public:
     ObstacleManager() {
         shader = new Shader("res/shader/obstacle.vert", "res/shader/obstacle.frag");
+        shader->Bind();
+        shader->SetInt("shadowMap", 1);
+        shader->SetInt("obstacleTex", 7);
+        shader->Unbind();
         maxObstacles = 5;
         spawnMin = vec3(-40, 2, -20);
         spawnMax = vec3(40, 25, 40);
         casualInitialized = false;
+        viewPos = vec3(0.0f, 10.0f, 70.0f);
+        movingLightPos = vec3(25.0f, 8.0f, 10.0f);
         maxFloatingCubes = 60;
         floatingCubeBaseSize = 0.7f;
         floatingSpawnTimer = 0.0f;
@@ -104,10 +115,15 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVerts), cubeVerts, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)0);
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6*sizeof(float)));
         glBindVertexArray(0);
+
+        // Load obstacle texture
+        obstacleTex = new Texture("res/texture/jacaranda_tree_trunk_diff_1k.jpg");
 
         // Arrow geometry: upward-pointing arrow (flat, facing +Z)
         float arrowVerts[54] = {
@@ -160,6 +176,7 @@ public:
             o.health = 9999;
             o.maxHealth = 9999;
             o.color = colors[i];
+            o.useTex = false;  // casual mode: solid colors
             obstacles.push_back(o);
             CasualMoveState s;
             s.velocity = vec3(0.0f, 0.0f, 0.0f);
@@ -287,10 +304,11 @@ public:
             o.maxHealth = baseHealth + rand() % 4;
             o.health = o.maxHealth;
             o.color = vec3(
-                0.5f + (rand() % 40) / 100.0f,
-                0.2f + (rand() % 30) / 100.0f,
-                0.2f + (rand() % 30) / 100.0f
+                0.6f + (rand() % 40) / 100.0f,
+                0.35f + (rand() % 45) / 100.0f,
+                0.35f + (rand() % 45) / 100.0f
             );
+            o.useTex = (rand() % 2) == 1;  // 50% chance of texture
             obstacles.push_back(o);
         }
 
@@ -322,9 +340,30 @@ public:
         return vec3(-999, -999, -999);
     }
 
+    void SetViewPos(vec3 pos) { viewPos = pos; }
+    void SetMovingLightPos(vec3 pos) { movingLightPos = pos; }
+
+    // Depth-only render for shadow map (casts shadows)
+    void RenderDepth(Shader* depthShader, mat4 lightSpaceMatrix) {
+        if (obstacles.empty()) return;
+        depthShader->Bind();
+        depthShader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+        glBindVertexArray(cubeVAO);
+        for (auto& o : obstacles) {
+            mat4 model = mat4(1.0);
+            model[3] = vec4(o.position, 1.0);
+            model = scale(model, vec3(o.radius));
+            depthShader->SetMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        glBindVertexArray(0);
+        depthShader->Unbind();
+    }
+
+    const vector<Obstacle>& GetObstacles() const { return obstacles; }
     bool IsEmpty() { return obstacles.empty(); }
 
-    void Render(mat4 projection, mat4 view) {
+    void Render(mat4 projection, mat4 view, mat4 lightSpaceMatrix, GLuint depthMap = -1) {
         for (auto& o : obstacles) {
             mat4 model = mat4(1.0);
             model[3] = vec4(o.position, 1.0);
@@ -337,7 +376,19 @@ public:
             shader->SetMat4("projection", projection);
             shader->SetMat4("view", view);
             shader->SetMat4("model", model);
+            shader->SetMat4("lightSpaceMatrix", lightSpaceMatrix);
             shader->SetVec3("objColor", col);
+            shader->SetVec3("viewPos", viewPos);
+            shader->SetVec3("movingLightPos", movingLightPos);
+            shader->SetInt("useTexture", o.useTex ? 1 : 0);
+            // shadow map
+            if (depthMap != (GLuint)-1) {
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, depthMap);
+            }
+            // obstacle texture
+            glActiveTexture(GL_TEXTURE7);
+            glBindTexture(GL_TEXTURE_2D, obstacleTex->GetId());
 
             glBindVertexArray(cubeVAO);
             glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -350,6 +401,7 @@ public:
             shader->Bind();
             shader->SetMat4("projection", projection);
             shader->SetMat4("view", view);
+            shader->SetInt("useTexture", 0);
             glBindVertexArray(cubeVAO);
             for (size_t i = 0; i < floatingCubes.size(); i++) {
                 const FloatingCube& fc = floatingCubes[i];
@@ -378,6 +430,7 @@ public:
             shader->Bind();
             shader->SetMat4("projection", projection);
             shader->SetMat4("view", view);
+            shader->SetInt("useTexture", 0);
             shader->SetFloat("objAlpha", 1.0f);
             glBindVertexArray(cubeVAO);
             float hScale = 5.5f;
@@ -405,6 +458,7 @@ public:
             shader->Bind();
             shader->SetMat4("projection", projection);
             shader->SetMat4("view", view);
+            shader->SetInt("useTexture", 0);
             shader->SetVec3("objColor", arrowColor);
             shader->SetFloat("objAlpha", 1.0f);
             glBindVertexArray(arrowVAO);

@@ -5,21 +5,26 @@ out vec4 FragColor;
 void main()
 {
     vec2 coord = gl_PointCoord - vec2(0.5);
-    float dist = length(coord);
-    if (dist > 0.5)
+
+    // Blade shape: long thin diamond like a windmill fan
+    // Elongated along X, narrow along Y
+    float bladeX = coord.x / 0.48;
+    float bladeY = coord.y / 0.12;
+    float bladeDist = bladeX * bladeX + bladeY * bladeY;
+    if (bladeDist > 1.0)
         discard;
 
-    // Three-layer compositing for visible glow
-    // Core: bright hot center
-    float core = 1.0 - smoothstep(0.0, 0.13, dist);
-    // Body: main colored region
-    float body = 1.0 - smoothstep(0.06, 0.47, dist);
-    // Glow: soft outer halo
-    float glow = exp(-dist * 4.5) * 0.45;
+    // Also draw a small round core at center
+    float coreDist = length(coord) / 0.08;
+    float coreShape = 1.0 - smoothstep(0.0, 1.0, coreDist);
 
-    float alpha = fragColor.a * (body * 0.55 + core * 0.95 + glow);
-    // Boost brightness at center for luminous look
-    vec3 color = fragColor.rgb * (1.0 + core * 0.8 + glow * 0.3);
+    // Blade body glow
+    float body = 1.0 - smoothstep(0.6, 1.0, bladeDist);
+    // Outer glow on blade
+    float glow = exp(-bladeDist * 2.0) * 0.6;
+
+    float alpha = fragColor.a * (body * 0.8 + coreShape * 1.5 + glow * 2.5);
+    vec3 color = fragColor.rgb * (2.5 + coreShape * 4.0 + glow * 2.0);
 
     FragColor = vec4(color, alpha);
 }

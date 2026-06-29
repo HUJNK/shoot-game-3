@@ -1656,5 +1656,11 @@
     <Image Include="res\texture\gun-specular-map.jpg">
       <Filter>资源文件</Filter>
     </Image>
+    <Image Include="res\texture\floor.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="res\texture\ceiling.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
   </ItemGroup>
 </Project>

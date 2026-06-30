@@ -84,13 +84,13 @@ void main() {
     float star1Dist = length(star1Pos - Position);
     float star1Atten = 1.0 / (1.0 + 0.004 * star1Dist + 0.0002 * star1Dist * star1Dist);
     float star1Diff = max(dot(norm, star1Dir), 0.0);
-    vec3 star1Light = star1Atten * starColor * star1Diff * 0.7;
+    vec3 star1Light = star1Atten * starColor * star1Diff * 0.55;
 
     vec3 star2Dir = normalize(star2Pos - Position);
     float star2Dist = length(star2Pos - Position);
     float star2Atten = 1.0 / (1.0 + 0.004 * star2Dist + 0.0002 * star2Dist * star2Dist);
     float star2Diff = max(dot(norm, star2Dir), 0.0);
-    vec3 star2Light = star2Atten * starColor * star2Diff * 0.7;
+    vec3 star2Light = star2Atten * starColor * star2Diff * 0.55;
 
     float shadow = ShadowCalculation(PosLightSpace);
 

@@ -75,8 +75,8 @@ void main() {
     vec3 starColor = vec3(1.0, 0.95, 0.7);
     float sd1 = length(star1 - Position);
     float sd2 = length(star2 - Position);
-    result += starColor * color * 0.24 / (1.0 + 0.004 * sd1 * sd1);
-    result += starColor * color * 0.24 / (1.0 + 0.004 * sd2 * sd2);
+    result += starColor * color * 0.20 / (1.0 + 0.004 * sd1 * sd1);
+    result += starColor * color * 0.20 / (1.0 + 0.004 * sd2 * sd2);
 
 	// === Environment Mapping: metallic reflection of sky ===
 	vec3 reflectDir = reflect(-viewDir, norm);

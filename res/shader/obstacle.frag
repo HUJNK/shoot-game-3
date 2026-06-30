@@ -79,8 +79,8 @@ void main()
     vec3 starCol = vec3(1.0, 0.95, 0.7);
     float sd1 = length(star1 - FragPos);
     float sd2 = length(star2 - FragPos);
-    result += starCol * objColor * 0.16 / (1.0 + 0.004 * sd1 * sd1);
-    result += starCol * objColor * 0.16 / (1.0 + 0.004 * sd2 * sd2);
+    result += starCol * objColor * 0.13 / (1.0 + 0.004 * sd1 * sd1);
+    result += starCol * objColor * 0.13 / (1.0 + 0.004 * sd2 * sd2);
 
 	// === Environment Mapping: metallic reflection of sky ===
 	vec3 reflectDir = reflect(-viewDir, norm);
